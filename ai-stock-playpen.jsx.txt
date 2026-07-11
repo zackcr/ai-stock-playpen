@@ -1,0 +1,1251 @@
+import React, { useState, useEffect, useCallback, useRef } from "react";
+
+const SEED = [
+  { ticker: "NVDA", name: "NVIDIA Corporation", category: "Chipmaker", price: 210.96, high: 236.54, low: 162.02, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "MOD", name: "Modine Manufacturing", category: "Infrastructure", price: 245.91, high: 323.25, low: 88.48, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "NVT", name: "nVent Electric", category: "Infrastructure", price: 160.72, high: 184.64, low: 72.94, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "EME", name: "EMCOR Group", category: "Infrastructure", price: 781.78, high: 951.96, low: 540.00, shares: 1, cost: 754.00, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "FIX", name: "Comfort Systems USA", category: "Infrastructure", price: 1756.09, high: 2073.99, low: 513.99, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "FCX", name: "Freeport-McMoRan", category: "Material Input", price: 61.52, high: 72.28, low: 35.15, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "TECK", name: "Teck Resources", category: "Material Input", price: 59.82, high: 71.25, low: 30.98, shares: 1, cost: 58.85, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "MU", name: "Micron Technology", category: "Memory", price: 979.30, high: 1255.00, low: 103.38, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "WDC", name: "Western Digital Corp.", category: "Memory", price: 582.59, high: 799.87, low: 64.23, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "STX", name: "Seagate Technology", category: "Memory", price: 910.34, high: 1145.00, low: 138.31, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "COHR", name: "Coherent Corp.", category: "Optical Materials", price: 324.50, high: 440.00, low: 84.35, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "CRWV", name: "CoreWeave, Inc.", category: "IaaS", price: 88.88, high: 153.20, low: 63.80, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "SPCX", name: "Space Exploration Technologies Corp.", category: "IaaS", price: 145.30, high: 225.64, low: 145.07, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "SOXX", name: "iShares Semiconductor ETF", category: "ETF", price: 581.34, high: 655.95, low: 232.33, shares: 5, cost: 552.00, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+];
+
+const STORAGE_KEY = "ai-playpen-stocks-v1";
+const SETTINGS_KEY = "ai-playpen-settings-v1";
+const HISTORY_KEY = "ai-playpen-history-v1";
+const DEFAULT_SETTINGS = {
+  apiKey: "",
+  buyTarget: -0.15,
+  trendWindowDays: 30,
+  sheetSync: { enabled: false, url: "", autoPush: false },
+};
+const MAX_HISTORY_POINTS = 400;
+const MAX_HISTORY_AGE_DAYS = 400;
+
+const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('AI Infrastructure Tracker') || ss.getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  var rows = data.stocks || [];
+  var headers = ['Ticker','Company Name','Category','Current Price','52-Week High','Current Dip %','52-Week Low','% Above Low','Buy Target','Range Position','Positions','Cost Basis','Current Value','Total Return %','Total Return $','Last Updated'];
+  sheet.clearContents();
+  sheet.appendRow(headers);
+  rows.forEach(function (r) {
+    sheet.appendRow([r.ticker, r.name, r.category, r.price, r.high, r.dip, r.low, r.aboveLow, r.buyTarget, r.rangePosition, r.shares, r.cost, r.value, r.returnPct, r.returnDollar, r.updated]);
+  });
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, rows: rows.length })).setMimeType(ContentService.MimeType.JSON);
+}`;
+
+const CATEGORY_COLOR = {
+  "Chipmaker": "#7F9CF5",
+  "Infrastructure": "#4FB286",
+  "Material Input": "#C9A66B",
+  "Memory": "#B08AE8",
+  "Optical Materials": "#5FBFD9",
+  "IaaS": "#E1636B",
+};
+
+function fmtMoney(n, digits = 2) {
+  return n.toLocaleString(undefined, { style: "currency", currency: "USD", minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+function fmtPct(n) {
+  const v = (n * 100).toFixed(1);
+  return `${n >= 0 ? "+" : ""}${v}%`;
+}
+
+function dipPct(price, high) {
+  return (price - high) / high;
+}
+function rangePos(price, low, high) {
+  if (high === low) return 0;
+  return Math.min(1, Math.max(0, (price - low) / (high - low)));
+}
+function classifyTrend(ret13w, ret26w) {
+  if (ret13w == null && ret26w == null) return null;
+  const signals = [ret13w, ret26w].filter((r) => r != null);
+  const up = signals.filter((r) => r > 0.02).length;
+  const down = signals.filter((r) => r < -0.02).length;
+  if (up === signals.length && up > 0) return { label: "Pullback in uptrend (proxy)", color: "#5DCAA5", bg: "#04342C" };
+  if (down === signals.length && down > 0) return { label: "Downtrend — caution (proxy)", color: "#E1636B", bg: "#501313" };
+  return { label: "Mixed / choppy (proxy)", color: "#B4B2A9", bg: "#2C2C2A" };
+}
+function classifyTrendCombined(price, sma50, sma200, ret13w, ret26w) {
+  if (sma50 != null && sma200 != null) {
+    const aboveBoth = price > sma50 && price > sma200;
+    const belowBoth = price < sma50 && price < sma200;
+    if (aboveBoth) return { label: "Above 50/200-day SMA", color: "#5DCAA5", bg: "#04342C", source: "sma" };
+    if (belowBoth) return { label: "Below 50/200-day SMA", color: "#E1636B", bg: "#501313", source: "sma" };
+    return { label: "Between 50/200-day SMA", color: "#B4B2A9", bg: "#2C2C2A", source: "sma" };
+  }
+  const proxy = classifyTrend(ret13w, ret26w);
+  return proxy ? { ...proxy, source: "proxy" } : null;
+}
+function dateKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function mergeHistoryByDay(existing, incoming, cap) {
+  const byDay = new Map();
+  (existing || []).forEach((p) => byDay.set(dateKey(p.t), p));
+  (incoming || []).forEach((p) => byDay.set(dateKey(p.t), p));
+  return Array.from(byDay.values())
+    .sort((a, b) => a.t - b.t)
+    .slice(-cap);
+}
+function getTrend(points, windowDays) {
+  if (!points || points.length < 2) return null;
+  const cutoff = Date.now() - windowDays * 86400000;
+  const inWindow = points.filter((p) => p.t >= cutoff);
+  const series = inWindow.length >= 2 ? inWindow : points.slice(-2);
+  const first = series[0];
+  const last = series[series.length - 1];
+  if (!first || !last || first.price === 0) return null;
+  return { pct: (last.price - first.price) / first.price, points: series };
+}
+function sparklinePath(points, width, height) {
+  if (!points || points.length < 2) return "";
+  const prices = points.map((p) => p.price);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || 1;
+  return points
+    .map((p, i) => {
+      const x = (i / (points.length - 1)) * width;
+      const y = height - ((p.price - min) / range) * height;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function IconInfo() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="8" r="6.4" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="8" cy="5.2" r="0.95" fill="currentColor" />
+      <path d="M8 7.6V11.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Modal({ titleId, title, subtitle, onClose, width = 360, children }) {
+  const containerRef = useRef(null);
+  const previouslyFocused = useRef(null);
+
+  useEffect(() => {
+    previouslyFocused.current = document.activeElement;
+    const focusables = () =>
+      containerRef.current
+        ? Array.prototype.slice
+            .call(containerRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+            .filter((el) => !el.disabled && el.offsetParent !== null)
+        : [];
+    const first = focusables()[0];
+    (first || containerRef.current) && (first || containerRef.current).focus();
+
+    function handleKey(e) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const list = focusables();
+        if (!list.length) return;
+        const firstEl = list[0];
+        const lastEl = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        } else if (!e.shiftKey && document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKey, true);
+    return () => {
+      document.removeEventListener("keydown", handleKey, true);
+      if (previouslyFocused.current && previouslyFocused.current.focus) previouslyFocused.current.focus();
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20, overflowY: "auto" }}
+      onClick={onClose}
+    >
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        style={{ background: "#131C2E", border: "1px solid #223049", borderRadius: 12, padding: 22, width, maxHeight: "85vh", overflowY: "auto", outline: "none" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id={titleId} style={{ color: "#E8EDF5", fontSize: 16, fontWeight: 700, marginBottom: subtitle ? 4 : 16, marginTop: 0 }}>
+          {title}
+        </h2>
+        {subtitle && <div style={{ color: "#7C89A3", fontSize: 12, marginBottom: 16 }}>{subtitle}</div>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [stocks, setStocks] = useState(SEED);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState({ price: "", shares: "", cost: "", category: "" });
+  const [filter, setFilter] = useState("All");
+  const [buyOnly, setBuyOnly] = useState(false);
+  const [saveState, setSaveState] = useState("idle");
+  const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [settingsDraft, setSettingsDraft] = useState({ apiKey: "", buyTarget: "-15", trendWindowDays: "30", sheetUrl: "", sheetEnabled: false, autoPush: false });
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshErrors, setRefreshErrors] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addDraft, setAddDraft] = useState({ ticker: "", name: "", category: "", price: "", high: "", low: "" });
+  const [addError, setAddError] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [smaRefreshing, setSmaRefreshing] = useState(false);
+  const [smaErrors, setSmaErrors] = useState([]);
+  const [smaUpdated, setSmaUpdated] = useState(null);
+  const [history, setHistory] = useState({});
+  const [pushing, setPushing] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const BUY_TARGET = settings.buyTarget;
+
+  useEffect(() => {
+    (async () => {
+      let loadedStocks = SEED;
+      try {
+        const res = await window.storage.get(STORAGE_KEY, false);
+        if (res && res.value) {
+          const parsed = JSON.parse(res.value);
+          if (Array.isArray(parsed) && parsed.length) {
+            loadedStocks = parsed.map((s) => ({
+              archived: false,
+              ret13w: null,
+              ret26w: null,
+              sma50: null,
+              sma200: null,
+              smaAsOf: null,
+              ...s,
+              category: s.ticker === "SOXX" && s.category === "Chipmaker" ? "ETF" : s.category,
+            }));
+          }
+        }
+      } catch (e) {
+        // no saved data yet
+      }
+
+      let loadedSettings = DEFAULT_SETTINGS;
+      try {
+        const res2 = await window.storage.get(SETTINGS_KEY, false);
+        if (res2 && res2.value) {
+          const parsed2 = JSON.parse(res2.value);
+          loadedSettings = {
+            ...DEFAULT_SETTINGS,
+            ...parsed2,
+            sheetSync: { ...DEFAULT_SETTINGS.sheetSync, ...(parsed2.sheetSync || {}) },
+          };
+        }
+      } catch (e) {
+        // no saved settings yet
+      }
+
+      let loadedHistory = {};
+      try {
+        const res3 = await window.storage.get(HISTORY_KEY, false);
+        if (res3 && res3.value) {
+          const parsed3 = JSON.parse(res3.value);
+          if (parsed3 && typeof parsed3 === "object") loadedHistory = parsed3;
+        }
+      } catch (e) {
+        // no saved history yet
+      }
+
+      // Systematic check-in: every time the app is opened, log the current price for
+      // each active ticker if today doesn't already have a point for it. This guarantees
+      // history accumulates over calendar time regardless of whether any external API
+      // (Finnhub, Stooq) is reachable — it only ever uses data already in local state.
+      const today = dateKey(Date.now());
+      const nextHistory = { ...loadedHistory };
+      let historyChanged = false;
+      loadedStocks.forEach((s) => {
+        if (s.archived) return;
+        const points = nextHistory[s.ticker] || [];
+        const last = points[points.length - 1];
+        if (!last || dateKey(last.t) !== today) {
+          nextHistory[s.ticker] = [...points, { t: Date.now(), price: s.price }].slice(-MAX_HISTORY_POINTS);
+          historyChanged = true;
+        }
+      });
+      if (historyChanged) {
+        try {
+          await window.storage.set(HISTORY_KEY, JSON.stringify(nextHistory), false);
+        } catch (e) {
+          // will retry next time something else persists history
+        }
+      }
+
+      setStocks(loadedStocks);
+      setSettings(loadedSettings);
+      setHistory(nextHistory);
+      setLoaded(true);
+    })();
+  }, []);
+
+  const persist = useCallback(async (next) => {
+    setSaveState("saving");
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify(next), false);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1200);
+    } catch (e) {
+      setSaveState("error");
+    }
+  }, []);
+
+  const persistSettings = useCallback(async (next) => {
+    try {
+      await window.storage.set(SETTINGS_KEY, JSON.stringify(next), false);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const persistHistory = useCallback(async (next) => {
+    try {
+      await window.storage.set(HISTORY_KEY, JSON.stringify(next), false);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const recordSnapshot = useCallback(
+    (priceMap) => {
+      const now = Date.now();
+      const cutoff = now - MAX_HISTORY_AGE_DAYS * 86400000;
+      setHistory((prev) => {
+        const next = { ...prev };
+        Object.keys(priceMap).forEach((ticker) => {
+          const existing = prev[ticker] || [];
+          const trimmed = existing.filter((p) => p.t >= cutoff);
+          const last = trimmed[trimmed.length - 1];
+          if (!last || last.price !== priceMap[ticker]) {
+            trimmed.push({ t: now, price: priceMap[ticker] });
+          }
+          next[ticker] = trimmed.slice(-MAX_HISTORY_POINTS);
+        });
+        persistHistory(next);
+        return next;
+      });
+    },
+    [persistHistory]
+  );
+
+  function openSettings() {
+    setSettingsDraft({
+      apiKey: settings.apiKey,
+      buyTarget: String(Math.round(settings.buyTarget * 100)),
+      trendWindowDays: String(settings.trendWindowDays),
+      sheetUrl: settings.sheetSync.url,
+      sheetEnabled: settings.sheetSync.enabled,
+      autoPush: settings.sheetSync.autoPush,
+    });
+    setShowSettings(true);
+  }
+
+  function saveSettings() {
+    const pct = parseFloat(settingsDraft.buyTarget);
+    const days = parseInt(settingsDraft.trendWindowDays, 10);
+    const next = {
+      apiKey: settingsDraft.apiKey.trim(),
+      buyTarget: isNaN(pct) ? settings.buyTarget : -Math.abs(pct) / 100,
+      trendWindowDays: isNaN(days) || days <= 0 ? settings.trendWindowDays : days,
+      sheetSync: {
+        enabled: settingsDraft.sheetEnabled && !!settingsDraft.sheetUrl.trim(),
+        url: settingsDraft.sheetUrl.trim(),
+        autoPush: settingsDraft.autoPush,
+      },
+    };
+    setSettings(next);
+    persistSettings(next);
+    setShowSettings(false);
+  }
+
+  async function fetchQuote(ticker, apiKey) {
+    let qRes, mRes;
+    try {
+      [qRes, mRes] = await Promise.all([
+        fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${apiKey}`),
+        fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${apiKey}`),
+      ]);
+    } catch (e) {
+      throw new Error(`${ticker}: network/CORS error — ${e.message || "request never completed"}`);
+    }
+
+    if (!qRes.ok) {
+      let body = "";
+      try {
+        body = (await qRes.text()).slice(0, 120);
+      } catch (e2) {
+        // ignore
+      }
+      throw new Error(`${ticker}: quote HTTP ${qRes.status} ${qRes.statusText}${body ? " — " + body : ""}`);
+    }
+    const q = await qRes.json();
+    const price = q && typeof q.c === "number" && q.c > 0 ? q.c : null;
+    if (price == null) throw new Error(`${ticker}: quote returned no price (${JSON.stringify(q)})`);
+
+    // Metric (52w high/low, 13w/26w return) is treated as best-effort — a failure here
+    // shouldn't block the price update, since some free-tier keys restrict parts of it.
+    let high = null, low = null, ret13w = null, ret26w = null, metricError = null;
+    if (mRes && mRes.ok) {
+      try {
+        const m = await mRes.json();
+        const metric = (m && m.metric) || {};
+        high = typeof metric["52WeekHigh"] === "number" ? metric["52WeekHigh"] : null;
+        low = typeof metric["52WeekLow"] === "number" ? metric["52WeekLow"] : null;
+        ret13w = typeof metric["13WeekPriceReturnDaily"] === "number" ? metric["13WeekPriceReturnDaily"] / 100 : null;
+        ret26w = typeof metric["26WeekPriceReturnDaily"] === "number" ? metric["26WeekPriceReturnDaily"] / 100 : null;
+      } catch (e3) {
+        metricError = "metric parse error";
+      }
+    } else if (mRes) {
+      metricError = `metric HTTP ${mRes.status}`;
+    }
+    return { price, high, low, ret13w, ret26w, metricError };
+  }
+
+  async function fetchStooqDaily(ticker) {
+    const symbol = `${ticker.toLowerCase()}.us`;
+    const directUrl = `https://stooq.com/q/d/l/?s=${symbol}&i=d`;
+    let text = null;
+    const attempts = [];
+
+    try {
+      const res = await fetch(directUrl);
+      if (res.ok) {
+        text = await res.text();
+        attempts.push(`direct: HTTP ${res.status} OK`);
+      } else {
+        attempts.push(`direct: HTTP ${res.status} ${res.statusText}`);
+      }
+    } catch (e) {
+      attempts.push(`direct: network/CORS error — ${e.message || "request never completed"}`);
+    }
+
+    if (!text || /^\s*</.test(text)) {
+      try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
+        const res2 = await fetch(proxyUrl);
+        if (res2.ok) {
+          text = await res2.text();
+          attempts.push(`proxy: HTTP ${res2.status} OK`);
+        } else {
+          attempts.push(`proxy: HTTP ${res2.status} ${res2.statusText}`);
+        }
+      } catch (e) {
+        attempts.push(`proxy: network/CORS error — ${e.message || "request never completed"}`);
+      }
+    }
+
+    if (!text) {
+      throw new Error(`${ticker}: ${attempts.join(" · ")}`);
+    }
+    if (/^\s*</.test(text)) {
+      throw new Error(`${ticker}: got HTML instead of CSV (${attempts.join(" · ")}) — first 80 chars: ${text.slice(0, 80).replace(/\s+/g, " ")}`);
+    }
+    if (/no data/i.test(text)) {
+      throw new Error(`${ticker}: Stooq says "no data" for symbol ${symbol} (${attempts.join(" · ")})`);
+    }
+
+    const rows = text
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((line) => {
+        const parts = line.split(",");
+        const close = parseFloat(parts[4]);
+        if (!parts[0] || isNaN(close)) return null;
+        return { date: parts[0], close };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    if (!rows.length) throw new Error(`${ticker}: CSV parsed but had no valid rows (${attempts.join(" · ")}) — raw start: ${text.slice(0, 80).replace(/\s+/g, " ")}`);
+    const closes = rows.map((r) => r.close);
+    const sma = (n) => (closes.length >= n ? closes.slice(-n).reduce((a, b) => a + b, 0) / n : null);
+    const series = rows.slice(-MAX_HISTORY_POINTS).map((r) => ({ t: Date.parse(r.date), price: r.close })).filter((p) => !isNaN(p.t));
+    return { sma50: sma(50), sma200: sma(200), asOf: rows[rows.length - 1].date, pointCount: closes.length, series };
+  }
+
+  async function refreshSma() {
+    setSmaRefreshing(true);
+    setSmaErrors([]);
+    const errors = [];
+    const results = {};
+    const active = stocks.filter((s) => !s.archived);
+    for (let i = 0; i < active.length; i++) {
+      const t = active[i].ticker;
+      try {
+        results[t] = await fetchStooqDaily(t);
+      } catch (e) {
+        errors.push(e && e.message ? e.message : `${t}: unknown error`);
+      }
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    const next = stocks.map((s) => {
+      const r = results[s.ticker];
+      if (!r) return s;
+      return { ...s, sma50: r.sma50, sma200: r.sma200, smaAsOf: r.asOf };
+    });
+    setStocks(next);
+    persist(next);
+
+    const tickersWithSeries = Object.keys(results).filter((t) => results[t].series && results[t].series.length);
+    if (tickersWithSeries.length) {
+      setHistory((prev) => {
+        const nextHistory = { ...prev };
+        tickersWithSeries.forEach((t) => {
+          nextHistory[t] = mergeHistoryByDay(prev[t], results[t].series, MAX_HISTORY_POINTS);
+        });
+        persistHistory(nextHistory);
+        return nextHistory;
+      });
+    }
+
+    setSmaErrors(errors);
+    setSmaUpdated(new Date());
+    setSmaRefreshing(false);
+  }
+
+  async function refreshLive() {
+    if (!settings.apiKey) {
+      openSettings();
+      return;
+    }
+    setRefreshing(true);
+    setRefreshErrors([]);
+    const errors = [];
+    const results = {};
+    const active = stocks.filter((s) => !s.archived);
+    for (let i = 0; i < active.length; i++) {
+      const t = active[i].ticker;
+      try {
+        results[t] = await fetchQuote(t, settings.apiKey);
+      } catch (e) {
+        errors.push(e && e.message ? e.message : `${t}: unknown error`);
+      }
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    const next = stocks.map((s) => {
+      const r = results[s.ticker];
+      if (!r) return s;
+      const high = r.high != null ? Math.max(r.high, r.price) : Math.max(s.high, r.price);
+      const low = r.low != null ? Math.min(r.low, r.price) : Math.min(s.low, r.price);
+      return {
+        ...s,
+        price: r.price,
+        high,
+        low,
+        ret13w: r.ret13w != null ? r.ret13w : s.ret13w != null ? s.ret13w : null,
+        ret26w: r.ret26w != null ? r.ret26w : s.ret26w != null ? s.ret26w : null,
+      };
+    });
+    setStocks(next);
+    persist(next);
+    const priceMap = {};
+    Object.keys(results).forEach((t) => (priceMap[t] = results[t].price));
+    if (Object.keys(priceMap).length) recordSnapshot(priceMap);
+    setRefreshErrors(errors);
+    setLastUpdated(new Date());
+    setRefreshing(false);
+    if (settings.sheetSync.enabled && settings.sheetSync.autoPush) {
+      pushToSheet(next);
+    }
+  }
+
+  async function pushToSheet(stocksToSend) {
+    if (!settings.sheetSync.url) return;
+    setPushing(true);
+    setPushMsg("");
+    const payload = {
+      updated: new Date().toISOString(),
+      stocks: (stocksToSend || stocks)
+        .filter((s) => !s.archived)
+        .map((s) => {
+          const dip = dipPct(s.price, s.high);
+          const aboveLow = s.low > 0 ? (s.price - s.low) / s.low : 0;
+          const rp = rangePos(s.price, s.low, s.high);
+          const value = s.shares ? s.shares * s.price : null;
+          const cost = s.shares ? s.shares * s.cost : null;
+          return {
+            ticker: s.ticker,
+            name: s.name,
+            category: s.category,
+            price: s.price,
+            high: s.high,
+            low: s.low,
+            dip,
+            aboveLow,
+            buyTarget: BUY_TARGET,
+            rangePosition: rp,
+            shares: s.shares,
+            cost: s.cost,
+            value,
+            returnPct: cost ? (value - cost) / cost : null,
+            returnDollar: cost ? value - cost : null,
+            updated: new Date().toISOString(),
+          };
+        }),
+    };
+    try {
+      await fetch(settings.sheetSync.url, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      setPushMsg("Pushed — check your sheet to confirm.");
+    } catch (e) {
+      setPushMsg("Push failed. Check the web app URL in settings.");
+    } finally {
+      setPushing(false);
+      setTimeout(() => setPushMsg(""), 4000);
+    }
+  }
+
+  function openAdd() {
+    setAddDraft({ ticker: "", name: "", category: filter !== "All" ? filter : "", price: "", high: "", low: "" });
+    setAddError("");
+    setShowAdd(true);
+  }
+
+  async function submitAdd() {
+    const ticker = addDraft.ticker.trim().toUpperCase();
+    const name = addDraft.name.trim();
+    const category = addDraft.category.trim() || "Uncategorized";
+    if (!ticker) return setAddError("Enter a ticker symbol.");
+    if (stocks.some((s) => s.ticker === ticker)) return setAddError(`${ticker} is already on the list.`);
+
+    let price = parseFloat(addDraft.price);
+    let high = parseFloat(addDraft.high);
+    let low = parseFloat(addDraft.low);
+
+    if ((isNaN(price) || isNaN(high) || isNaN(low)) && settings.apiKey) {
+      try {
+        const live = await fetchQuote(ticker, settings.apiKey);
+        price = live.price;
+        high = live.high != null ? live.high : live.price;
+        low = live.low != null ? live.low : live.price;
+      } catch (e) {
+        return setAddError(`Couldn't fetch live data for ${ticker}. Enter price/high/low manually.`);
+      }
+    }
+    if (isNaN(price) || price <= 0) return setAddError("Enter a valid current price, or connect live data.");
+    if (isNaN(high)) high = price;
+    if (isNaN(low)) low = price;
+    if (low > high) [low, high] = [high, low];
+
+    const next = [...stocks, { ticker, name: name || ticker, category, price, high, low, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null }];
+    setStocks(next);
+    persist(next);
+    recordSnapshot({ [ticker]: price });
+    setShowAdd(false);
+  }
+
+  function toggleArchive(ticker) {
+    const next = stocks.map((s) => (s.ticker === ticker ? { ...s, archived: !s.archived } : s));
+    setStocks(next);
+    persist(next);
+    setEditing(null);
+  }
+
+  function removeTicker(ticker) {
+    if (!window.confirm(`Remove ${ticker} entirely? This can't be undone.`)) return;
+    const next = stocks.filter((s) => s.ticker !== ticker);
+    setStocks(next);
+    persist(next);
+    setEditing(null);
+  }
+
+  function openEdit(ticker) {
+    const s = stocks.find((x) => x.ticker === ticker);
+    setEditing(ticker);
+    setDraft({
+      price: String(s.price),
+      shares: s.shares != null ? String(s.shares) : "",
+      cost: s.cost != null ? String(s.cost) : "",
+      category: s.category,
+    });
+  }
+
+  function saveEdit() {
+    const price = parseFloat(draft.price);
+    const shares = draft.shares.trim() === "" ? null : parseFloat(draft.shares);
+    const cost = draft.cost.trim() === "" ? null : parseFloat(draft.cost);
+    const category = draft.category.trim();
+    if (isNaN(price) || price <= 0) return;
+    const next = stocks.map((s) => {
+      if (s.ticker !== editing) return s;
+      const high = Math.max(s.high, price);
+      const low = Math.min(s.low, price);
+      return {
+        ...s,
+        price,
+        high,
+        low,
+        shares: shares != null && !isNaN(shares) && shares > 0 ? shares : null,
+        cost: cost != null && !isNaN(cost) && cost > 0 ? cost : null,
+        category: category || s.category,
+      };
+    });
+    setStocks(next);
+    persist(next);
+    recordSnapshot({ [editing]: price });
+    setEditing(null);
+  }
+
+  function clearPosition() {
+    const next = stocks.map((s) => (s.ticker === editing ? { ...s, shares: null, cost: null } : s));
+    setStocks(next);
+    persist(next);
+    setEditing(null);
+  }
+
+  const categories = ["All", ...Array.from(new Set(stocks.filter((s) => !s.archived).map((s) => s.category)))];
+  const archivedCount = stocks.filter((s) => s.archived).length;
+
+  let totalCost = 0, totalValue = 0, buySignals = 0, positionCount = 0;
+  const buySignalsByCategory = {};
+  stocks.forEach((s) => {
+    if (s.shares) {
+      totalCost += s.shares * s.cost;
+      totalValue += s.shares * s.price;
+      positionCount += 1;
+    }
+    if (!s.archived && dipPct(s.price, s.high) <= BUY_TARGET) {
+      buySignals += 1;
+      buySignalsByCategory[s.category] = (buySignalsByCategory[s.category] || 0) + 1;
+    }
+  });
+  const totalReturn = totalValue - totalCost;
+  const totalReturnPct = totalCost > 0 ? totalReturn / totalCost : 0;
+
+  let concentration = null;
+  if (buySignals >= 2) {
+    const [topCategory, topCount] = Object.entries(buySignalsByCategory).sort((a, b) => b[1] - a[1])[0];
+    const share = topCount / buySignals;
+    if (share >= 0.5) concentration = { category: topCategory, count: topCount, total: buySignals, share };
+  }
+
+  const visible = stocks
+    .filter((s) => (showArchived ? s.archived : !s.archived))
+    .filter((s) => filter === "All" || s.category === filter)
+    .filter((s) => !buyOnly || dipPct(s.price, s.high) <= BUY_TARGET)
+    .sort((a, b) => dipPct(a.price, a.high) - dipPct(b.price, b.high));
+
+  if (!loaded) {
+    return (
+      <div style={{ minHeight: 300, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "ui-monospace, monospace", color: "#8A96AC" }}>
+        loading playpen...
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "#0B1220", minHeight: "100vh", padding: "32px 20px", fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
+      <style>{`
+        * { box-sizing: border-box; }
+        .mono { font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace; }
+        .pill { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+        .stock-card { transition: border-color 0.15s ease, transform 0.1s ease; }
+        .stock-card:hover { border-color: #3A4A68 !important; }
+        .filter-btn { cursor: pointer; border: 1px solid #223049; background: transparent; color: #8A96AC; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 500; min-height: 32px; }
+        .filter-btn.active { background: #E8A33D; color: #412402; border-color: #E8A33D; }
+        .icon-btn { cursor: pointer; border: 1px solid #223049; background: #131C2E; color: #E8EDF5; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; min-height: 36px; }
+        .icon-btn:hover { border-color: #3A4A68; }
+        .icon-btn.icon-only { padding: 8px; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+        .icon-btn:disabled { cursor: not-allowed; }
+        input[type=text], input[type=number] { background: #0B1220; border: 1px solid #223049; color: #E8EDF5; padding: 9px 10px; border-radius: 6px; font-size: 14px; width: 100%; font-family: ui-monospace, monospace; min-height: 36px; }
+        input[type=checkbox] { min-height: auto; width: 16px; height: 16px; }
+        input:focus { outline: none; border-color: #E8A33D; }
+        ::placeholder { color: #6B7690; }
+        button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+          outline: 2px solid #E8A33D;
+          outline-offset: 2px;
+        }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+      `}</style>
+
+      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 28 }}>
+          <div>
+            <div style={{ color: "#4FB286", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Buy-the-dip tracker</div>
+            <h1 style={{ color: "#E8EDF5", fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" }}>AI Stock Playpen</h1>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div role="status" aria-live="polite" style={{ color: "#7C89A3", fontSize: 11.5, fontFamily: "ui-monospace, monospace", textAlign: "right" }}>
+              {pushMsg && pushMsg}
+              {!pushMsg && smaRefreshing && "updating SMAs..."}
+              {!pushMsg && !smaRefreshing && refreshing && "refreshing..."}
+              {!pushMsg && !smaRefreshing && !refreshing && saveState === "saving" && "saving..."}
+              {!pushMsg && !smaRefreshing && !refreshing && saveState === "saved" && "saved ✓"}
+              {!pushMsg && !smaRefreshing && !refreshing && saveState === "error" && "save failed"}
+              {!pushMsg && !smaRefreshing && !refreshing && saveState === "idle" && lastUpdated && `updated ${lastUpdated.toLocaleTimeString()}`}
+              {!pushMsg && !smaRefreshing && !refreshing && saveState === "idle" && !lastUpdated && smaUpdated && `SMAs updated ${smaUpdated.toLocaleTimeString()}`}
+            </div>
+            {settings.sheetSync.enabled && (
+              <button type="button" className="icon-btn" onClick={() => pushToSheet()} disabled={pushing} style={{ opacity: pushing ? 0.6 : 1 }}>
+                {pushing ? "Pushing..." : "Push to sheet"}
+              </button>
+            )}
+            <button type="button" className="icon-btn" onClick={refreshLive} disabled={refreshing} style={{ opacity: refreshing ? 0.6 : 1 }}>
+              {settings.apiKey ? (refreshing ? "Refreshing..." : "Refresh live") : "Connect live data"}
+            </button>
+            <button type="button" className="icon-btn" onClick={refreshSma} disabled={smaRefreshing} style={{ opacity: smaRefreshing ? 0.6 : 1 }} title="Daily close data from Stooq, used for 50/200-day SMA trend">
+              {smaRefreshing ? "Updating SMAs..." : "Update SMAs"}
+            </button>
+            <button className="icon-btn icon-only" onClick={openSettings} aria-label="Settings" title="Settings" type="button">
+              <span aria-hidden="true">⚙</span>
+            </button>
+            <button className="icon-btn icon-only" onClick={() => setShowAbout(true)} aria-label="About this tracker" title="About" type="button">
+              <IconInfo />
+            </button>
+          </div>
+        </div>
+
+        {refreshErrors.length > 0 && (
+          <div role="alert" style={{ background: "#412402", border: "1px solid #633806", color: "#FAC775", fontSize: 12, borderRadius: 8, padding: "10px 12px", marginBottom: 12, lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Live refresh failed for {refreshErrors.length} ticker{refreshErrors.length > 1 ? "s" : ""} — kept last known price:</div>
+            {refreshErrors.slice(0, 6).map((msg, i) => (
+              <div key={i} className="mono" style={{ fontSize: 11 }}>{msg}</div>
+            ))}
+            {refreshErrors.length > 6 && <div style={{ fontSize: 11 }}>...and {refreshErrors.length - 6} more (same pattern).</div>}
+          </div>
+        )}
+
+        {smaErrors.length > 0 && (
+          <div role="alert" style={{ background: "#412402", border: "1px solid #633806", color: "#FAC775", fontSize: 12, borderRadius: 8, padding: "10px 12px", marginBottom: 12, lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>SMA update failed for {smaErrors.length} ticker{smaErrors.length > 1 ? "s" : ""}:</div>
+            {smaErrors.slice(0, 6).map((msg, i) => (
+              <div key={i} className="mono" style={{ fontSize: 11, wordBreak: "break-word" }}>{msg}</div>
+            ))}
+            {smaErrors.length > 6 && <div style={{ fontSize: 11 }}>...and {smaErrors.length - 6} more (same pattern).</div>}
+          </div>
+        )}
+
+        {concentration && (
+          <div role="status" style={{ background: "#501313", border: "1px solid #791F1F", color: "#F09595", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 20 }}>
+            {concentration.count} of {concentration.total} buy signals are in <strong>{concentration.category}</strong> ({Math.round(concentration.share * 100)}%) — likely one sector-wide move, not {concentration.total} independent opportunities.
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 28 }}>
+          <StatCard label="Positions held" value={String(positionCount)} />
+          <StatCard label="Cost basis" value={fmtMoney(totalCost, 0)} />
+          <StatCard label="Current value" value={fmtMoney(totalValue, 0)} />
+          <StatCard label="Total return" value={`${fmtMoney(totalReturn, 0)} (${fmtPct(totalReturnPct)})`} tone={totalReturn >= 0 ? "up" : "down"} />
+          <StatCard label={`Buy signals (${Math.round(BUY_TARGET * 100)}%)`} value={String(buySignals)} tone={buySignals > 0 ? "buy" : undefined} />
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+          <div role="group" aria-label="Filter by category" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {categories.map((c) => (
+              <button key={c} type="button" className={`filter-btn ${filter === c ? "active" : ""}`} aria-pressed={filter === c} onClick={() => setFilter(c)}>{c}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="icon-btn" style={{ padding: "6px 14px", fontSize: 12.5, borderRadius: 999 }} onClick={openAdd}>+ Add ticker</button>
+            <button type="button" className={`filter-btn ${buyOnly ? "active" : ""}`} aria-pressed={buyOnly} onClick={() => setBuyOnly((v) => !v)}>
+              {buyOnly ? "Showing buy zone only" : "Show buy zone only"}
+            </button>
+            <button type="button" className={`filter-btn ${showArchived ? "active" : ""}`} aria-pressed={showArchived} onClick={() => setShowArchived((v) => !v)}>
+              {showArchived ? "Back to active" : `Archived (${archivedCount})`}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+          {visible.map((s) => {
+            const dip = dipPct(s.price, s.high);
+            const pos = rangePos(s.price, s.low, s.high);
+            const targetPrice = s.high * (1 + BUY_TARGET);
+            const targetPos = rangePos(targetPrice, s.low, s.high);
+            const inBuyZone = dip <= BUY_TARGET;
+            const hasPosition = !!s.shares;
+            const posValue = hasPosition ? s.shares * s.price : 0;
+            const posCost = hasPosition ? s.shares * s.cost : 0;
+            const posReturn = posValue - posCost;
+            const posReturnPct = posCost > 0 ? posReturn / posCost : 0;
+            const catColor = CATEGORY_COLOR[s.category] || "#8A96AC";
+            const trend = getTrend(history[s.ticker], settings.trendWindowDays);
+            const sparkW = 88, sparkH = 24;
+            const sparkPath = trend ? sparklinePath(trend.points, sparkW, sparkH) : "";
+            const trendUp = trend && trend.pct >= 0;
+            const trendCtx = classifyTrendCombined(s.price, s.sma50, s.sma200, s.ret13w, s.ret26w);
+
+            return (
+              <div
+                key={s.ticker}
+                className="stock-card"
+                style={{
+                  background: "#131C2E",
+                  border: !s.archived && inBuyZone ? "1px solid #E8A33D" : "1px solid #223049",
+                  borderRadius: 12,
+                  padding: "16px 16px 14px",
+                  opacity: s.archived ? 0.6 : 1,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <h3 className="mono" style={{ color: "#E8EDF5", fontSize: 17, fontWeight: 700, margin: 0 }}>{s.ticker}</h3>
+                      {!s.archived && inBuyZone && <span className="pill" style={{ background: "#412402", color: "#FAC775" }}>Buy zone</span>}
+                      {hasPosition && <span className="pill" style={{ background: "#04342C", color: "#5DCAA5" }}>Holding</span>}
+                      {s.archived && <span className="pill" style={{ background: "#2C2C2A", color: "#B4B2A9" }}>Archived</span>}
+                    </div>
+                    <div style={{ color: "#8A96AC", fontSize: 12.5, marginTop: 2 }}>{s.name}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    style={{ padding: "5px 12px", fontSize: 12 }}
+                    onClick={() => openEdit(s.ticker)}
+                    aria-label={`Edit ${s.ticker}`}
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+                  <span className="mono" style={{ color: "#E8EDF5", fontSize: 20, fontWeight: 700 }}>{fmtMoney(s.price)}</span>
+                  <span className="mono" style={{ fontSize: 13, fontWeight: 600, color: dip <= BUY_TARGET ? "#FAC775" : "#E1636B" }}>{fmtPct(dip)} from high</span>
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: catColor, fontWeight: 600 }}>{s.category}</span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, height: sparkH }}>
+                  {trend ? (
+                    <>
+                      <svg aria-hidden="true" width={sparkW} height={sparkH} viewBox={`0 0 ${sparkW} ${sparkH}`}>
+                        <path d={sparkPath} fill="none" stroke={trendUp ? "#5DCAA5" : "#E1636B"} strokeWidth="1.5" />
+                      </svg>
+                      <span className="mono" style={{ fontSize: 12, fontWeight: 600, color: trendUp ? "#5DCAA5" : "#E1636B" }}>
+                        {fmtPct(trend.pct)} / {settings.trendWindowDays}d
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 11.5, color: "#7C89A3" }}>
+                      {history[s.ticker] && history[s.ticker].length === 1
+                        ? "1 price recorded — check in again to draw the trend."
+                        : "No price history yet."}
+                    </span>
+                  )}
+                </div>
+
+                {trendCtx && (
+                  <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="pill" style={{ background: trendCtx.bg, color: trendCtx.color }}>{trendCtx.label}</span>
+                    {trendCtx.source === "sma" && (
+                      <span className="mono" style={{ fontSize: 10.5, color: "#7C89A3" }}>
+                        50d {fmtMoney(s.sma50, 0)} · 200d {fmtMoney(s.sma200, 0)} · as of {s.smaAsOf}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div aria-hidden="true" style={{ position: "relative", height: 10, background: "#0B1220", borderRadius: 999, marginBottom: 6, border: "1px solid #1C2740" }}>
+                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pos * 100}%`, background: inBuyZone ? "#E8A33D" : "#3A4A68", borderRadius: 999 }} />
+                  <div style={{ position: "absolute", left: `${targetPos * 100}%`, top: -3, bottom: -3, width: 2, background: "#E1636B" }} title="Buy target" />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "#7C89A3", marginBottom: 12 }} className="mono">
+                  <span>{fmtMoney(s.low, 0)} low</span>
+                  <span>{fmtMoney(s.high, 0)} high</span>
+                </div>
+
+                {hasPosition ? (
+                  <div style={{ borderTop: "1px solid #1C2740", paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 12.5 }} className="mono">
+                    <span style={{ color: "#8A96AC" }}>{s.shares} sh @ {fmtMoney(s.cost)}</span>
+                    <span style={{ color: posReturn >= 0 ? "#5DCAA5" : "#E1636B", fontWeight: 700 }}>
+                      {fmtMoney(posReturn)} ({fmtPct(posReturnPct)})
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ borderTop: "1px solid #1C2740", paddingTop: 10, fontSize: 12, color: "#7C89A3" }}>No position</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {visible.length === 0 && (
+          <div style={{ textAlign: "center", color: "#7C89A3", padding: "40px 0", fontSize: 14 }}>No stocks match this filter.</div>
+        )}
+      </div>
+
+      {showAbout && (
+        <Modal titleId="about-title" title="How this tracker works" onClose={() => setShowAbout(false)} width={480}>
+            <AboutSection title="52-week high / low">
+              The two anchors on the dip gauge. "High" is the highest price the stock has traded at over the trailing 12 months; "low" is the lowest. They aren't quarterly or all-time figures — they roll forward continuously, so a stock's own range shifts as time passes. If you enter a price outside the current range (manually or via live refresh), the app auto-expands the high or low to include it.
+            </AboutSection>
+
+            <AboutSection title="Dip %">
+              <span className="mono">(price − 52w high) ÷ 52w high</span>. How far below its own peak the stock currently sits. Always zero or negative.
+            </AboutSection>
+
+            <AboutSection title="% above low">
+              <span className="mono">(price − 52w low) ÷ 52w low</span>. The mirror image of dip % — how far the stock has already run up from its floor.
+            </AboutSection>
+
+            <AboutSection title="Range position">
+              Where the current price sits between the low (0%) and high (100%) of the 52-week range. This drives the gauge bar's fill.
+            </AboutSection>
+
+            <AboutSection title="Buy target / buy zone">
+              A dip % threshold you set (default -15%). When a stock's dip % is at or beyond that line, it's flagged "Buy zone" and counted in the buy-signals stat. It's purely a rule on the gauge — it doesn't check volume, trend, or fundamentals, so it's best treated as a screener, not a signal to act on by itself (see the note on the main chat about that).
+            </AboutSection>
+
+            <AboutSection title="Trend & sparkline">
+              History for the sparkline builds up automatically, three ways: once per day whenever you open the app (using whatever price is already stored — no network needed), whenever you refresh live prices or manually edit one, and in bulk from "Update SMAs," which pulls Stooq's actual daily closing history and backfills months of real data in one go. The sparkline and "±X% / Nd" figure use whichever points fall inside your chosen trend window (7/30/90 days in Settings).
+            </AboutSection>
+
+            <AboutSection title="Trend context (50/200-day SMA)">
+              "Update SMAs" pulls daily closing prices from Stooq (free, no key) and computes true 50-day and 200-day simple moving averages. The pill compares current price against both: above both → "Above 50/200-day SMA," below both → "Below 50/200-day SMA," split → "Between 50/200-day SMA." This is a daily figure, not live — it only needs to move once a day, since a moving average doesn't shift meaningfully within a session. New listings (like SPCX, IPO'd June 2026) won't have 200 trading days of history yet, so their 200-day SMA — and sometimes the 50-day too — will read as unavailable until enough time passes. If a ticker has no SMA data, the pill falls back to the Finnhub 13w/26w return proxy described below.
+            </AboutSection>
+
+            <AboutSection title="Trend proxy (fallback)">
+              Before an SMA update, or for tickers Stooq can't resolve, the pill instead uses Finnhub's 13-week and 26-week price return figures — both positive → "Pullback in uptrend (proxy)," both negative → "Downtrend — caution (proxy)," mixed → "Mixed / choppy (proxy)." This exists because Finnhub's own historical daily candles are paywalled on the free tier (403 on that endpoint), so a true SMA isn't reachable from a Finnhub key alone — hence pulling daily closes from Stooq separately.
+            </AboutSection>
+
+            <AboutSection title="A note on Stooq">
+              Stooq has no official API or CORS support, so this app tries a direct request first and falls back to a public CORS proxy (allorigins.win) if that's blocked by your browser. Both are free and unauthenticated, which means occasional flakiness or missing tickers is possible — treat SMA gaps as "try again later," not as a data problem with your portfolio.
+            </AboutSection>
+
+            <AboutSection title="Concentration warning">
+              If half or more of your active buy signals land in a single category, a banner flags it. The dip gauge treats every ticker independently, but AI infrastructure names are correlated — five buy signals in "Memory" on the same day is usually one macro or sector move, not five separate opportunities.
+            </AboutSection>
+
+            <AboutSection title="Position & return">
+              Shares × cost basis vs. shares × current price gives return $ and return %. Cost basis is your average cost per share, entered manually.
+            </AboutSection>
+
+            <AboutSection title="Live data">
+              Current price, 52-week high/low, and 13w/26w return come from Finnhub's free API when you connect a key in Settings. Without a key, prices are whatever you've entered manually and the trend-context pill won't appear.
+            </AboutSection>
+
+            <AboutSection title="Sheet sync">
+              Optional one-way push of your current watchlist to a Google Sheet, via an Apps Script web app you deploy yourself. It overwrites the sheet each push; it doesn't read anything back.
+            </AboutSection>
+
+            <AboutSection title="Categories & archive">
+              Categories are freeform tags you control, editable per ticker. Archiving hides a ticker from the main view and buy-signal count without deleting its data or position.
+            </AboutSection>
+
+            <div style={{ borderTop: "1px solid #1C2740", paddingTop: 12, marginTop: 4, color: "#7C89A3", fontSize: 11.5, lineHeight: 1.6 }}>
+              This is a personal tracking tool, not investment advice. Dip % alone doesn't tell you whether a drop is temporary or structural.
+            </div>
+
+            <button type="button" className="icon-btn" style={{ width: "100%", marginTop: 16 }} onClick={() => setShowAbout(false)}>Close</button>
+        </Modal>
+      )}
+
+      {showSettings && (
+        <Modal titleId="settings-title" title="Settings" subtitle="Live pricing, trend window, and sheet sync" onClose={() => setShowSettings(false)} width={420}>
+            <label htmlFor="setting-buy-target" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Dip target (buy signal fires below this)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <input id="setting-buy-target" type="text" inputMode="decimal" value={settingsDraft.buyTarget} onChange={(e) => setSettingsDraft((d) => ({ ...d, buyTarget: e.target.value }))} placeholder="15" style={{ width: 90 }} />
+              <span id="setting-buy-target-suffix" style={{ color: "#8A96AC", fontSize: 13 }}>% below 52-week high</span>
+            </div>
+
+            <label htmlFor="setting-api-key" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Finnhub API key</label>
+            <input id="setting-api-key" type="text" value={settingsDraft.apiKey} onChange={(e) => setSettingsDraft((d) => ({ ...d, apiKey: e.target.value }))} placeholder="paste your free API key" aria-describedby="setting-api-key-hint" style={{ marginBottom: 8 }} />
+            <div id="setting-api-key-hint" style={{ color: "#7C89A3", fontSize: 11.5, marginBottom: 16, lineHeight: 1.5 }}>
+              Free at <span className="mono" style={{ color: "#7F9CF5" }}>finnhub.io/register</span> — 60 requests/min, no card required.
+            </div>
+
+            <div role="group" aria-label="Trend window" style={{ marginBottom: 16 }}>
+              <span style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Trend window</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                {["7", "30", "90"].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`filter-btn ${settingsDraft.trendWindowDays === d ? "active" : ""}`}
+                    aria-pressed={settingsDraft.trendWindowDays === d}
+                    onClick={() => setSettingsDraft((s) => ({ ...s, trendWindowDays: d }))}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ borderTop: "1px solid #1C2740", paddingTop: 14, marginBottom: 14 }}>
+              <label htmlFor="setting-sheet-enabled" style={{ display: "flex", alignItems: "center", gap: 8, color: "#E8EDF5", fontSize: 13, fontWeight: 600, marginBottom: 10, cursor: "pointer" }}>
+                <input id="setting-sheet-enabled" type="checkbox" checked={settingsDraft.sheetEnabled} onChange={(e) => setSettingsDraft((d) => ({ ...d, sheetEnabled: e.target.checked }))} style={{ width: "auto" }} />
+                Sync to Google Sheet
+              </label>
+
+              {settingsDraft.sheetEnabled && (
+                <>
+                  <label htmlFor="setting-sheet-url" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Apps Script web app URL</label>
+                  <input id="setting-sheet-url" type="text" value={settingsDraft.sheetUrl} onChange={(e) => setSettingsDraft((d) => ({ ...d, sheetUrl: e.target.value }))} placeholder="https://script.google.com/macros/s/.../exec" style={{ marginBottom: 10 }} />
+
+                  <label htmlFor="setting-auto-push" style={{ display: "flex", alignItems: "center", gap: 8, color: "#8A96AC", fontSize: 12.5, marginBottom: 12, cursor: "pointer" }}>
+                    <input id="setting-auto-push" type="checkbox" checked={settingsDraft.autoPush} onChange={(e) => setSettingsDraft((d) => ({ ...d, autoPush: e.target.checked }))} style={{ width: "auto" }} />
+                    Auto-push after every live refresh
+                  </label>
+
+                  <div id="apps-script-instructions" style={{ color: "#7C89A3", fontSize: 11.5, marginBottom: 8, lineHeight: 1.6 }}>
+                    In your sheet: Extensions → Apps Script, paste the script below, then Deploy → New deployment → Web app (execute as you, access "Anyone"). Paste the resulting URL above.
+                  </div>
+                  <div style={{ position: "relative", marginBottom: 8 }}>
+                    <label htmlFor="apps-script-snippet" className="sr-only">Apps Script code to paste into your sheet</label>
+                    <textarea
+                      id="apps-script-snippet"
+                      readOnly
+                      value={APPS_SCRIPT_TEMPLATE}
+                      rows={6}
+                      aria-describedby="apps-script-instructions"
+                      style={{ width: "100%", background: "#0B1220", border: "1px solid #223049", color: "#8FB4D9", fontFamily: "ui-monospace, monospace", fontSize: 10.5, borderRadius: 6, padding: 8, resize: "vertical" }}
+                    />
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      style={{ position: "absolute", top: 6, right: 6, padding: "3px 9px", fontSize: 11 }}
+                      aria-label="Copy Apps Script code to clipboard"
+                      onClick={() => {
+                        navigator.clipboard.writeText(APPS_SCRIPT_TEMPLATE);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      }}
+                    >
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  <div style={{ color: "#7C89A3", fontSize: 11, marginBottom: 4 }}>
+                    Note: Google's response can't be read cross-origin, so a push always shows as sent — check the sheet itself to confirm it landed.
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="icon-btn" style={{ flex: 1, background: "#E8A33D", color: "#412402", border: "none" }} onClick={saveSettings}>Save</button>
+              <button type="button" className="icon-btn" onClick={() => setShowSettings(false)}>Cancel</button>
+            </div>
+        </Modal>
+      )}
+
+      {editing && (
+        <Modal titleId="edit-title" title={editing} subtitle="Update price and position" onClose={() => setEditing(null)} width={340}>
+            <label htmlFor="edit-price" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Current price</label>
+            <input id="edit-price" type="text" inputMode="decimal" value={draft.price} onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value }))} placeholder="0.00" style={{ marginBottom: 12 }} />
+
+            <label htmlFor="edit-category" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Category</label>
+            <input id="edit-category" type="text" list="edit-category-options" value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))} placeholder="Chipmaker" style={{ marginBottom: 12 }} />
+            <datalist id="edit-category-options">
+              {categories.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}
+            </datalist>
+
+            <label htmlFor="edit-shares" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Shares owned (optional)</label>
+            <input id="edit-shares" type="text" inputMode="decimal" value={draft.shares} onChange={(e) => setDraft((d) => ({ ...d, shares: e.target.value }))} placeholder="0" style={{ marginBottom: 12 }} />
+
+            <label htmlFor="edit-cost" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Average cost per share (optional)</label>
+            <input id="edit-cost" type="text" inputMode="decimal" value={draft.cost} onChange={(e) => setDraft((d) => ({ ...d, cost: e.target.value }))} placeholder="0.00" style={{ marginBottom: 18 }} />
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="icon-btn" style={{ flex: 1, background: "#E8A33D", color: "#412402", border: "none" }} onClick={saveEdit}>Save</button>
+              <button type="button" className="icon-btn" onClick={() => setEditing(null)}>Cancel</button>
+            </div>
+            <button type="button" className="icon-btn" style={{ width: "100%", marginTop: 8, color: "#E1636B", fontSize: 12 }} onClick={clearPosition}>Clear position</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button type="button" className="icon-btn" style={{ flex: 1, fontSize: 12 }} onClick={() => toggleArchive(editing)}>
+                {stocks.find((s) => s.ticker === editing)?.archived ? "Unarchive" : "Archive"}
+              </button>
+              <button type="button" className="icon-btn" style={{ flex: 1, fontSize: 12, color: "#E1636B" }} onClick={() => removeTicker(editing)}>Remove</button>
+            </div>
+        </Modal>
+      )}
+
+      {showAdd && (
+        <Modal
+          titleId="add-title"
+          title="Add ticker"
+          subtitle={settings.apiKey ? "Leave price fields blank to pull them live." : "Connect live data in settings to auto-fill price and 52-week range."}
+          onClose={() => setShowAdd(false)}
+          width={360}
+        >
+            <label htmlFor="add-ticker" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Ticker</label>
+            <input id="add-ticker" type="text" value={addDraft.ticker} onChange={(e) => setAddDraft((d) => ({ ...d, ticker: e.target.value.toUpperCase() }))} placeholder="AMD" style={{ marginBottom: 12 }} />
+
+            <label htmlFor="add-name" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Company name (optional)</label>
+            <input id="add-name" type="text" value={addDraft.name} onChange={(e) => setAddDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Advanced Micro Devices" style={{ marginBottom: 12 }} />
+
+            <label htmlFor="add-category" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Category</label>
+            <input id="add-category" type="text" list="category-options" value={addDraft.category} onChange={(e) => setAddDraft((d) => ({ ...d, category: e.target.value }))} placeholder="Chipmaker" style={{ marginBottom: 12 }} />
+            <datalist id="category-options">
+              {categories.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}
+            </datalist>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <div>
+                <label htmlFor="add-price" style={{ color: "#8A96AC", fontSize: 11, display: "block", marginBottom: 5 }}>Price</label>
+                <input id="add-price" type="text" inputMode="decimal" value={addDraft.price} onChange={(e) => setAddDraft((d) => ({ ...d, price: e.target.value }))} placeholder="auto" />
+              </div>
+              <div>
+                <label htmlFor="add-high" style={{ color: "#8A96AC", fontSize: 11, display: "block", marginBottom: 5 }}>52w high</label>
+                <input id="add-high" type="text" inputMode="decimal" value={addDraft.high} onChange={(e) => setAddDraft((d) => ({ ...d, high: e.target.value }))} placeholder="auto" />
+              </div>
+              <div>
+                <label htmlFor="add-low" style={{ color: "#8A96AC", fontSize: 11, display: "block", marginBottom: 5 }}>52w low</label>
+                <input id="add-low" type="text" inputMode="decimal" value={addDraft.low} onChange={(e) => setAddDraft((d) => ({ ...d, low: e.target.value }))} placeholder="auto" />
+              </div>
+            </div>
+
+            {addError && <div role="alert" style={{ color: "#E1636B", fontSize: 12, marginBottom: 10 }}>{addError}</div>}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button type="button" className="icon-btn" style={{ flex: 1, background: "#E8A33D", color: "#412402", border: "none" }} onClick={submitAdd}>Add ticker</button>
+              <button type="button" className="icon-btn" onClick={() => setShowAdd(false)}>Cancel</button>
+            </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function AboutSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <h3 style={{ color: "#E8EDF5", fontSize: 13, fontWeight: 600, marginBottom: 4, marginTop: 0 }}>{title}</h3>
+      <div style={{ color: "#8A96AC", fontSize: 12.5, lineHeight: 1.6 }}>{children}</div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, tone }) {
+  const color = tone === "up" ? "#5DCAA5" : tone === "down" ? "#E1636B" : tone === "buy" ? "#FAC775" : "#E8EDF5";
+  return (
+    <div style={{ background: "#131C2E", border: "1px solid #223049", borderRadius: 10, padding: "12px 14px" }}>
+      <div style={{ color: "#8A96AC", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>{label}</div>
+      <div className="mono" style={{ color, fontSize: 18, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
