@@ -1,33 +1,42 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
 const SEED = [
-  { ticker: "NVDA", name: "NVIDIA Corporation", category: "Chipmaker", price: 210.96, high: 236.54, low: 162.02, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "MOD", name: "Modine Manufacturing", category: "Infrastructure", price: 245.91, high: 323.25, low: 88.48, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "NVT", name: "nVent Electric", category: "Infrastructure", price: 160.72, high: 184.64, low: 72.94, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "EME", name: "EMCOR Group", category: "Infrastructure", price: 781.78, high: 951.96, low: 540.00, shares: 1, cost: 754.00, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "FIX", name: "Comfort Systems USA", category: "Infrastructure", price: 1756.09, high: 2073.99, low: 513.99, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "FCX", name: "Freeport-McMoRan", category: "Material Input", price: 61.52, high: 72.28, low: 35.15, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "TECK", name: "Teck Resources", category: "Material Input", price: 59.82, high: 71.25, low: 30.98, shares: 1, cost: 58.85, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "MU", name: "Micron Technology", category: "Memory", price: 979.30, high: 1255.00, low: 103.38, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "WDC", name: "Western Digital Corp.", category: "Memory", price: 582.59, high: 799.87, low: 64.23, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "STX", name: "Seagate Technology", category: "Memory", price: 910.34, high: 1145.00, low: 138.31, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "COHR", name: "Coherent Corp.", category: "Optical Materials", price: 324.50, high: 440.00, low: 84.35, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "CRWV", name: "CoreWeave, Inc.", category: "IaaS", price: 88.88, high: 153.20, low: 63.80, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "SPCX", name: "Space Exploration Technologies Corp.", category: "IaaS", price: 145.30, high: 225.64, low: 145.07, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
-  { ticker: "SOXX", name: "iShares Semiconductor ETF", category: "ETF", price: 581.34, high: 655.95, low: 232.33, shares: 5, cost: 552.00, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null },
+  { ticker: "NVDA", name: "NVIDIA Corporation", category: "Chipmaker", price: 210.96, high: 236.54, low: 162.02, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "MOD", name: "Modine Manufacturing", category: "Infrastructure", price: 245.91, high: 323.25, low: 88.48, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "NVT", name: "nVent Electric", category: "Infrastructure", price: 160.72, high: 184.64, low: 72.94, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "EME", name: "EMCOR Group", category: "Infrastructure", price: 781.78, high: 951.96, low: 540.00, shares: 1, cost: 754.00, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "FIX", name: "Comfort Systems USA", category: "Infrastructure", price: 1756.09, high: 2073.99, low: 513.99, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "FCX", name: "Freeport-McMoRan", category: "Material Input", price: 61.52, high: 72.28, low: 35.15, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "TECK", name: "Teck Resources", category: "Material Input", price: 59.82, high: 71.25, low: 30.98, shares: 1, cost: 58.85, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "MU", name: "Micron Technology", category: "Memory", price: 979.30, high: 1255.00, low: 103.38, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "WDC", name: "Western Digital Corp.", category: "Memory", price: 582.59, high: 799.87, low: 64.23, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "STX", name: "Seagate Technology", category: "Memory", price: 910.34, high: 1145.00, low: 138.31, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "COHR", name: "Coherent Corp.", category: "Optical Materials", price: 324.50, high: 440.00, low: 84.35, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "CRWV", name: "CoreWeave, Inc.", category: "IaaS", price: 88.88, high: 153.20, low: 63.80, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "SPCX", name: "Space Exploration Technologies Corp.", category: "IaaS", price: 145.30, high: 225.64, low: 145.07, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
+  { ticker: "SOXX", name: "iShares Semiconductor ETF", category: "ETF", price: 581.34, high: 655.95, low: 232.33, shares: 5, cost: 552.00, archived: false, ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [] },
 ];
 
 const STORAGE_KEY = "ai-playpen-stocks-v1";
 const SETTINGS_KEY = "ai-playpen-settings-v1";
 const HISTORY_KEY = "ai-playpen-history-v1";
+const LASTSEEN_KEY = "ai-playpen-lastseen-v1";
+const REALIZED_KEY = "ai-playpen-realized-v1";
 const DEFAULT_SETTINGS = {
   apiKey: "",
   buyTarget: -0.15,
   trendWindowDays: 30,
   sheetSync: { enabled: false, url: "", autoPush: false },
+  cash: 0,
+  maxPositionPct: 0.25,
+  notifyEnabled: false,
 };
 const MAX_HISTORY_POINTS = 400;
 const MAX_HISTORY_AGE_DAYS = 400;
+const INSIGHTS_CACHE_MS = 86400000;
+const PLAYPEN_VERSION = "1.8.0";
+const BUILD_NUMBER = "8";
+const BUILD_DATE = "2026-07-11";
 
 const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -44,12 +53,12 @@ const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
 }`;
 
 const CATEGORY_COLOR = {
-  "Chipmaker": "#7F9CF5",
-  "Infrastructure": "#4FB286",
-  "Material Input": "#C9A66B",
-  "Memory": "#B08AE8",
-  "Optical Materials": "#5FBFD9",
-  "IaaS": "#E1636B",
+  "Chipmaker": "#6B7EE0",
+  "Infrastructure": "#1B9E5C",
+  "Memory": "#9370C7",
+  "Material Input": "#B0912E",
+  "Optical Materials": "#1E8FC4",
+  "IaaS": "#C1517E",
 };
 
 function fmtMoney(n, digits = 2) {
@@ -58,6 +67,12 @@ function fmtMoney(n, digits = 2) {
 function fmtPct(n) {
   const v = (n * 100).toFixed(1);
   return `${n >= 0 ? "+" : ""}${v}%`;
+}
+function fmtMarketCap(n) {
+  // Finnhub reports marketCapitalization in millions of USD.
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}T`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}B`;
+  return `$${n.toFixed(0)}M`;
 }
 
 function dipPct(price, high) {
@@ -72,32 +87,23 @@ function classifyTrend(ret13w, ret26w) {
   const signals = [ret13w, ret26w].filter((r) => r != null);
   const up = signals.filter((r) => r > 0.02).length;
   const down = signals.filter((r) => r < -0.02).length;
-  if (up === signals.length && up > 0) return { label: "Pullback in uptrend (proxy)", color: "#5DCAA5", bg: "#04342C" };
-  if (down === signals.length && down > 0) return { label: "Downtrend — caution (proxy)", color: "#E1636B", bg: "#501313" };
-  return { label: "Mixed / choppy (proxy)", color: "#B4B2A9", bg: "#2C2C2A" };
+  if (up === signals.length && up > 0) return { label: "Pullback in uptrend", color: "#5DCAA5", bg: "#04342C" };
+  if (down === signals.length && down > 0) return { label: "Downtrend — caution", color: "#E1636B", bg: "#501313" };
+  return { label: "Mixed / choppy", color: "#B4B2A9", bg: "#2C2C2A" };
 }
-function classifyTrendCombined(price, sma50, sma200, ret13w, ret26w) {
-  if (sma50 != null && sma200 != null) {
-    const aboveBoth = price > sma50 && price > sma200;
-    const belowBoth = price < sma50 && price < sma200;
-    if (aboveBoth) return { label: "Above 50/200-day SMA", color: "#5DCAA5", bg: "#04342C", source: "sma" };
-    if (belowBoth) return { label: "Below 50/200-day SMA", color: "#E1636B", bg: "#501313", source: "sma" };
-    return { label: "Between 50/200-day SMA", color: "#B4B2A9", bg: "#2C2C2A", source: "sma" };
-  }
-  const proxy = classifyTrend(ret13w, ret26w);
-  return proxy ? { ...proxy, source: "proxy" } : null;
+function getBuySignalTickers(stocks, buyTarget) {
+  return stocks.filter((s) => !s.archived && dipPct(s.price, s.high) <= buyTarget).map((s) => s.ticker);
+}
+function aggregateLots(lots) {
+  if (!lots || !lots.length) return { shares: null, cost: null };
+  const shares = lots.reduce((sum, l) => sum + l.shares, 0);
+  if (shares <= 0) return { shares: null, cost: null };
+  const totalCost = lots.reduce((sum, l) => sum + l.shares * l.cost, 0);
+  return { shares, cost: totalCost / shares };
 }
 function dateKey(ts) {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function mergeHistoryByDay(existing, incoming, cap) {
-  const byDay = new Map();
-  (existing || []).forEach((p) => byDay.set(dateKey(p.t), p));
-  (incoming || []).forEach((p) => byDay.set(dateKey(p.t), p));
-  return Array.from(byDay.values())
-    .sort((a, b) => a.t - b.t)
-    .slice(-cap);
 }
 function getTrend(points, windowDays) {
   if (!points || points.length < 2) return null;
@@ -123,6 +129,20 @@ function sparklinePath(points, width, height) {
     })
     .join(" ");
 }
+function industryToCategory(industry) {
+  if (!industry) return null;
+  const lower = industry.toLowerCase();
+  const rules = [
+    [/semiconductor/, "Chipmaker"],
+    [/metal|mining/, "Material Input"],
+    [/data storage|storage/, "Memory"],
+    [/electrical equip|electronic equip|communication equip|industrial/, "Infrastructure"],
+    [/software|it services|internet|cloud/, "IaaS"],
+    [/exchange traded|etf/, "ETF"],
+  ];
+  for (const [re, category] of rules) if (re.test(lower)) return category;
+  return industry;
+}
 
 function IconInfo() {
   return (
@@ -137,6 +157,8 @@ function IconInfo() {
 function Modal({ titleId, title, subtitle, onClose, width = 360, children }) {
   const containerRef = useRef(null);
   const previouslyFocused = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     previouslyFocused.current = document.activeElement;
@@ -152,7 +174,7 @@ function Modal({ titleId, title, subtitle, onClose, width = 360, children }) {
     function handleKey(e) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === "Tab") {
@@ -174,7 +196,7 @@ function Modal({ titleId, title, subtitle, onClose, width = 360, children }) {
       document.removeEventListener("keydown", handleKey, true);
       if (previouslyFocused.current && previouslyFocused.current.focus) previouslyFocused.current.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div
@@ -211,21 +233,40 @@ export default function App() {
   const [saveState, setSaveState] = useState("idle");
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
-  const [settingsDraft, setSettingsDraft] = useState({ apiKey: "", buyTarget: "-15", trendWindowDays: "30", sheetUrl: "", sheetEnabled: false, autoPush: false });
+  const [settingsDraft, setSettingsDraft] = useState({
+    apiKey: "",
+    buyTarget: "-15",
+    trendWindowDays: "30",
+    sheetUrl: "",
+    sheetEnabled: false,
+    autoPush: false,
+    cash: "0",
+    maxPositionPct: "25",
+    notifyEnabled: false,
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [refreshErrors, setRefreshErrors] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addDraft, setAddDraft] = useState({ ticker: "", name: "", category: "", price: "", high: "", low: "" });
   const [addError, setAddError] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [categoryTouched, setCategoryTouched] = useState(false);
+  const [addLookupStatus, setAddLookupStatus] = useState("idle");
   const [showArchived, setShowArchived] = useState(false);
-  const [smaRefreshing, setSmaRefreshing] = useState(false);
-  const [smaErrors, setSmaErrors] = useState([]);
-  const [smaUpdated, setSmaUpdated] = useState(null);
+  const [expanded, setExpanded] = useState({});
+  const [detailRangeMap, setDetailRangeMap] = useState({});
   const [history, setHistory] = useState({});
   const [pushing, setPushing] = useState(false);
   const [pushMsg, setPushMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const [newSignals, setNewSignals] = useState(null);
+  const [insights, setInsights] = useState({});
+  const [realizedGains, setRealizedGains] = useState([]);
+  const [lotDraft, setLotDraft] = useState({ shares: "", cost: "" });
+  const [lastSeenBuySignals, setLastSeenBuySignals] = useState(null);
+  const [notifyPermission, setNotifyPermission] = useState(typeof Notification < "u" ? Notification.permission : "unsupported");
 
   const BUY_TARGET = settings.buyTarget;
 
@@ -241,9 +282,15 @@ export default function App() {
               archived: false,
               ret13w: null,
               ret26w: null,
-              sma50: null,
-              sma200: null,
-              smaAsOf: null,
+              prevClose: null,
+              dayOpen: null,
+              dayHigh: null,
+              dayLow: null,
+              marketCap: null,
+              peRatio: null,
+              dividendYield: null,
+              beta: null,
+              lots: [],
               ...s,
               category: s.ticker === "SOXX" && s.category === "Chipmaker" ? "ETF" : s.category,
             }));
@@ -281,8 +328,8 @@ export default function App() {
 
       // Systematic check-in: every time the app is opened, log the current price for
       // each active ticker if today doesn't already have a point for it. This guarantees
-      // history accumulates over calendar time regardless of whether any external API
-      // (Finnhub, Stooq) is reachable — it only ever uses data already in local state.
+      // history accumulates over calendar time regardless of whether Finnhub is reachable
+      // — it only ever uses data already in local state.
       const today = dateKey(Date.now());
       const nextHistory = { ...loadedHistory };
       let historyChanged = false;
@@ -303,9 +350,46 @@ export default function App() {
         }
       }
 
+      // What's-new check: compare today's buy-zone tickers against the list saved last
+      // time the app was opened, and flag anything new. Suppressed on a genuinely first
+      // run (no saved lastSeen list yet) so it doesn't just list everything.
+      const currentSignals = getBuySignalTickers(loadedStocks, loadedSettings.buyTarget);
+      let previousSignals = [];
+      let hadPreviousSignals = false;
+      try {
+        const res4 = await window.storage.get(LASTSEEN_KEY, false);
+        if (res4 && res4.value) {
+          hadPreviousSignals = true;
+          const parsed4 = JSON.parse(res4.value);
+          if (Array.isArray(parsed4)) previousSignals = parsed4;
+        }
+      } catch (e) {
+        // no saved lastseen list yet
+      }
+      const freshSignals = currentSignals.filter((t) => !previousSignals.includes(t));
+      if (freshSignals.length && hadPreviousSignals) setNewSignals(freshSignals);
+      setLastSeenBuySignals(currentSignals);
+      try {
+        await window.storage.set(LASTSEEN_KEY, JSON.stringify(currentSignals), false);
+      } catch (e) {
+        // ignore
+      }
+
+      let loadedRealized = [];
+      try {
+        const res5 = await window.storage.get(REALIZED_KEY, false);
+        if (res5 && res5.value) {
+          const parsed5 = JSON.parse(res5.value);
+          if (Array.isArray(parsed5)) loadedRealized = parsed5;
+        }
+      } catch (e) {
+        // no saved realized-gains log yet
+      }
+
       setStocks(loadedStocks);
       setSettings(loadedSettings);
       setHistory(nextHistory);
+      setRealizedGains(loadedRealized);
       setLoaded(true);
     })();
   }, []);
@@ -332,6 +416,14 @@ export default function App() {
   const persistHistory = useCallback(async (next) => {
     try {
       await window.storage.set(HISTORY_KEY, JSON.stringify(next), false);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const persistRealized = useCallback(async (next) => {
+    try {
+      await window.storage.set(REALIZED_KEY, JSON.stringify(next), false);
     } catch (e) {
       // ignore
     }
@@ -367,6 +459,9 @@ export default function App() {
       sheetUrl: settings.sheetSync.url,
       sheetEnabled: settings.sheetSync.enabled,
       autoPush: settings.sheetSync.autoPush,
+      cash: String(settings.cash),
+      maxPositionPct: String(Math.round(settings.maxPositionPct * 100)),
+      notifyEnabled: settings.notifyEnabled,
     });
     setShowSettings(true);
   }
@@ -374,6 +469,8 @@ export default function App() {
   function saveSettings() {
     const pct = parseFloat(settingsDraft.buyTarget);
     const days = parseInt(settingsDraft.trendWindowDays, 10);
+    const cash = parseFloat(settingsDraft.cash);
+    const maxPositionPct = parseFloat(settingsDraft.maxPositionPct);
     const next = {
       apiKey: settingsDraft.apiKey.trim(),
       buyTarget: isNaN(pct) ? settings.buyTarget : -Math.abs(pct) / 100,
@@ -383,10 +480,23 @@ export default function App() {
         url: settingsDraft.sheetUrl.trim(),
         autoPush: settingsDraft.autoPush,
       },
+      cash: isNaN(cash) || cash < 0 ? settings.cash : cash,
+      maxPositionPct: isNaN(maxPositionPct) || maxPositionPct <= 0 ? settings.maxPositionPct : maxPositionPct / 100,
+      // Re-checked against the real permission at save time, not just the checkbox,
+      // so a revoked/never-granted permission can't leave notifications silently "on".
+      notifyEnabled: settingsDraft.notifyEnabled && typeof Notification < "u" && Notification.permission === "granted",
     };
     setSettings(next);
     persistSettings(next);
     setShowSettings(false);
+  }
+
+  async function fetchProfile(ticker, apiKey) {
+    const res = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(ticker)}&token=${apiKey}`);
+    if (!res.ok) throw new Error(`profile HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data || !data.name) throw new Error("no profile match");
+    return { name: data.name, industry: data.finnhubIndustry || null };
   }
 
   async function fetchQuote(ticker, apiKey) {
@@ -412,10 +522,16 @@ export default function App() {
     const q = await qRes.json();
     const price = q && typeof q.c === "number" && q.c > 0 ? q.c : null;
     if (price == null) throw new Error(`${ticker}: quote returned no price (${JSON.stringify(q)})`);
+    const prevClose = typeof q.pc === "number" && q.pc > 0 ? q.pc : null;
+    const dayOpen = typeof q.o === "number" && q.o > 0 ? q.o : null;
+    const dayHigh = typeof q.h === "number" && q.h > 0 ? q.h : null;
+    const dayLow = typeof q.l === "number" && q.l > 0 ? q.l : null;
 
-    // Metric (52w high/low, 13w/26w return) is treated as best-effort — a failure here
-    // shouldn't block the price update, since some free-tier keys restrict parts of it.
-    let high = null, low = null, ret13w = null, ret26w = null, metricError = null;
+    // Metric (52w high/low, 13w/26w return, and the extra fundamentals) is treated as
+    // best-effort — a failure here shouldn't block the price update, since some free-tier
+    // keys restrict parts of it.
+    let high = null, low = null, ret13w = null, ret26w = null;
+    let marketCap = null, peRatio = null, dividendYield = null, beta = null, metricError = null;
     if (mRes && mRes.ok) {
       try {
         const m = await mRes.json();
@@ -424,115 +540,17 @@ export default function App() {
         low = typeof metric["52WeekLow"] === "number" ? metric["52WeekLow"] : null;
         ret13w = typeof metric["13WeekPriceReturnDaily"] === "number" ? metric["13WeekPriceReturnDaily"] / 100 : null;
         ret26w = typeof metric["26WeekPriceReturnDaily"] === "number" ? metric["26WeekPriceReturnDaily"] / 100 : null;
+        marketCap = typeof metric.marketCapitalization === "number" ? metric.marketCapitalization : null;
+        peRatio = typeof metric.peBasicExclExtraTTM === "number" ? metric.peBasicExclExtraTTM : null;
+        dividendYield = typeof metric.dividendYieldIndicatedAnnual === "number" ? metric.dividendYieldIndicatedAnnual / 100 : null;
+        beta = typeof metric.beta === "number" ? metric.beta : null;
       } catch (e3) {
         metricError = "metric parse error";
       }
     } else if (mRes) {
       metricError = `metric HTTP ${mRes.status}`;
     }
-    return { price, high, low, ret13w, ret26w, metricError };
-  }
-
-  async function fetchStooqDaily(ticker) {
-    const symbol = `${ticker.toLowerCase()}.us`;
-    const directUrl = `https://stooq.com/q/d/l/?s=${symbol}&i=d`;
-    let text = null;
-    const attempts = [];
-
-    try {
-      const res = await fetch(directUrl);
-      if (res.ok) {
-        text = await res.text();
-        attempts.push(`direct: HTTP ${res.status} OK`);
-      } else {
-        attempts.push(`direct: HTTP ${res.status} ${res.statusText}`);
-      }
-    } catch (e) {
-      attempts.push(`direct: network/CORS error — ${e.message || "request never completed"}`);
-    }
-
-    if (!text || /^\s*</.test(text)) {
-      try {
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
-        const res2 = await fetch(proxyUrl);
-        if (res2.ok) {
-          text = await res2.text();
-          attempts.push(`proxy: HTTP ${res2.status} OK`);
-        } else {
-          attempts.push(`proxy: HTTP ${res2.status} ${res2.statusText}`);
-        }
-      } catch (e) {
-        attempts.push(`proxy: network/CORS error — ${e.message || "request never completed"}`);
-      }
-    }
-
-    if (!text) {
-      throw new Error(`${ticker}: ${attempts.join(" · ")}`);
-    }
-    if (/^\s*</.test(text)) {
-      throw new Error(`${ticker}: got HTML instead of CSV (${attempts.join(" · ")}) — first 80 chars: ${text.slice(0, 80).replace(/\s+/g, " ")}`);
-    }
-    if (/no data/i.test(text)) {
-      throw new Error(`${ticker}: Stooq says "no data" for symbol ${symbol} (${attempts.join(" · ")})`);
-    }
-
-    const rows = text
-      .trim()
-      .split("\n")
-      .slice(1)
-      .map((line) => {
-        const parts = line.split(",");
-        const close = parseFloat(parts[4]);
-        if (!parts[0] || isNaN(close)) return null;
-        return { date: parts[0], close };
-      })
-      .filter(Boolean)
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    if (!rows.length) throw new Error(`${ticker}: CSV parsed but had no valid rows (${attempts.join(" · ")}) — raw start: ${text.slice(0, 80).replace(/\s+/g, " ")}`);
-    const closes = rows.map((r) => r.close);
-    const sma = (n) => (closes.length >= n ? closes.slice(-n).reduce((a, b) => a + b, 0) / n : null);
-    const series = rows.slice(-MAX_HISTORY_POINTS).map((r) => ({ t: Date.parse(r.date), price: r.close })).filter((p) => !isNaN(p.t));
-    return { sma50: sma(50), sma200: sma(200), asOf: rows[rows.length - 1].date, pointCount: closes.length, series };
-  }
-
-  async function refreshSma() {
-    setSmaRefreshing(true);
-    setSmaErrors([]);
-    const errors = [];
-    const results = {};
-    const active = stocks.filter((s) => !s.archived);
-    for (let i = 0; i < active.length; i++) {
-      const t = active[i].ticker;
-      try {
-        results[t] = await fetchStooqDaily(t);
-      } catch (e) {
-        errors.push(e && e.message ? e.message : `${t}: unknown error`);
-      }
-      await new Promise((r) => setTimeout(r, 150));
-    }
-    const next = stocks.map((s) => {
-      const r = results[s.ticker];
-      if (!r) return s;
-      return { ...s, sma50: r.sma50, sma200: r.sma200, smaAsOf: r.asOf };
-    });
-    setStocks(next);
-    persist(next);
-
-    const tickersWithSeries = Object.keys(results).filter((t) => results[t].series && results[t].series.length);
-    if (tickersWithSeries.length) {
-      setHistory((prev) => {
-        const nextHistory = { ...prev };
-        tickersWithSeries.forEach((t) => {
-          nextHistory[t] = mergeHistoryByDay(prev[t], results[t].series, MAX_HISTORY_POINTS);
-        });
-        persistHistory(nextHistory);
-        return nextHistory;
-      });
-    }
-
-    setSmaErrors(errors);
-    setSmaUpdated(new Date());
-    setSmaRefreshing(false);
+    return { price, high, low, ret13w, ret26w, prevClose, dayOpen, dayHigh, dayLow, marketCap, peRatio, dividendYield, beta, metricError };
   }
 
   async function refreshLive() {
@@ -566,6 +584,14 @@ export default function App() {
         low,
         ret13w: r.ret13w != null ? r.ret13w : s.ret13w != null ? s.ret13w : null,
         ret26w: r.ret26w != null ? r.ret26w : s.ret26w != null ? s.ret26w : null,
+        prevClose: r.prevClose != null ? r.prevClose : s.prevClose != null ? s.prevClose : null,
+        dayOpen: r.dayOpen != null ? r.dayOpen : s.dayOpen != null ? s.dayOpen : null,
+        dayHigh: r.dayHigh != null ? r.dayHigh : s.dayHigh != null ? s.dayHigh : null,
+        dayLow: r.dayLow != null ? r.dayLow : s.dayLow != null ? s.dayLow : null,
+        marketCap: r.marketCap != null ? r.marketCap : s.marketCap != null ? s.marketCap : null,
+        peRatio: r.peRatio != null ? r.peRatio : s.peRatio != null ? s.peRatio : null,
+        dividendYield: r.dividendYield != null ? r.dividendYield : s.dividendYield != null ? s.dividendYield : null,
+        beta: r.beta != null ? r.beta : s.beta != null ? s.beta : null,
       };
     });
     setStocks(next);
@@ -573,6 +599,30 @@ export default function App() {
     const priceMap = {};
     Object.keys(results).forEach((t) => (priceMap[t] = results[t].price));
     if (Object.keys(priceMap).length) recordSnapshot(priceMap);
+
+    const currentSignals = getBuySignalTickers(next, BUY_TARGET);
+    const freshSignals = currentSignals.filter((t) => !(lastSeenBuySignals || []).includes(t));
+    if (freshSignals.length) {
+      setNewSignals(freshSignals);
+      if (settings.notifyEnabled && typeof Notification < "u" && Notification.permission === "granted") {
+        try {
+          new Notification("New buy-zone signal", {
+            body: freshSignals.length === 1
+              ? `${freshSignals[0]} just hit your dip target.`
+              : `${freshSignals.length} tickers just hit your dip target: ${freshSignals.join(", ")}`,
+          });
+        } catch (e) {
+          // notification blocked or unsupported mid-session — non-fatal
+        }
+      }
+    }
+    setLastSeenBuySignals(currentSignals);
+    try {
+      await window.storage.set(LASTSEEN_KEY, JSON.stringify(currentSignals), false);
+    } catch (e) {
+      // ignore
+    }
+
     setRefreshErrors(errors);
     setLastUpdated(new Date());
     setRefreshing(false);
@@ -631,11 +681,127 @@ export default function App() {
     }
   }
 
+  function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportBackup() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      stocks,
+      settings,
+      history,
+    };
+    downloadFile(JSON.stringify(payload, null, 2), `ai-stock-playpen-backup-${dateKey(Date.now())}.json`, "application/json");
+  }
+
+  function importBackup(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || !Array.isArray(parsed.stocks)) throw new Error("missing stocks array");
+        const nextStocks = parsed.stocks.map((s) => ({
+          archived: false,
+          ret13w: null,
+          ret26w: null,
+          prevClose: null,
+          dayOpen: null,
+          dayHigh: null,
+          dayLow: null,
+          marketCap: null,
+          peRatio: null,
+          dividendYield: null,
+          beta: null,
+          ...s,
+        }));
+        setStocks(nextStocks);
+        persist(nextStocks);
+        if (parsed.settings && typeof parsed.settings === "object") {
+          const nextSettings = {
+            ...DEFAULT_SETTINGS,
+            ...parsed.settings,
+            sheetSync: { ...DEFAULT_SETTINGS.sheetSync, ...(parsed.settings.sheetSync || {}) },
+          };
+          setSettings(nextSettings);
+          persistSettings(nextSettings);
+        }
+        if (parsed.history && typeof parsed.history === "object") {
+          setHistory(parsed.history);
+          persistHistory(parsed.history);
+        }
+        setImportMsg(`Imported ${nextStocks.length} tickers.`);
+      } catch (e) {
+        setImportMsg("Import failed — file isn't a valid backup.");
+      }
+      setTimeout(() => setImportMsg(""), 4000);
+    };
+    reader.readAsText(file);
+  }
+
+  function exportCsv() {
+    const headers = [
+      "Ticker", "Company Name", "Category", "Current Price", "52-Week High", "52-Week Low",
+      "Dip %", "Shares", "Cost Basis", "Current Value", "Total Return %", "Archived",
+    ];
+    const rows = stocks.map((s) => {
+      const dip = dipPct(s.price, s.high);
+      const value = s.shares ? s.shares * s.price : "";
+      const cost = s.shares ? s.shares * s.cost : "";
+      const returnPct = s.shares && cost ? (value - cost) / cost : "";
+      return [
+        s.ticker, s.name, s.category, s.price, s.high, s.low,
+        (dip * 100).toFixed(1), s.shares || "", s.cost || "", value,
+        returnPct === "" ? "" : (returnPct * 100).toFixed(1), s.archived ? "yes" : "no",
+      ];
+    });
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    downloadFile(csv, `ai-stock-playpen-${dateKey(Date.now())}.csv`, "text/csv");
+  }
+
   function openAdd() {
     setAddDraft({ ticker: "", name: "", category: filter !== "All" ? filter : "", price: "", high: "", low: "" });
     setAddError("");
+    setNameTouched(false);
+    setCategoryTouched(filter !== "All");
+    setAddLookupStatus("idle");
     setShowAdd(true);
   }
+
+  // Debounced company lookup while adding a ticker: fills in name/industry-derived
+  // category as the user types, unless they've already typed into either field.
+  useEffect(() => {
+    if (!showAdd || !settings.apiKey) return;
+    const ticker = addDraft.ticker.trim().toUpperCase();
+    if (!ticker) {
+      setAddLookupStatus("idle");
+      return;
+    }
+    setAddLookupStatus("loading");
+    const timer = setTimeout(async () => {
+      try {
+        const profile = await fetchProfile(ticker, settings.apiKey);
+        if (addDraft.ticker.trim().toUpperCase() !== ticker) return;
+        setAddLookupStatus("found");
+        setAddDraft((d) => (nameTouched ? d : { ...d, name: profile.name }));
+        const category = industryToCategory(profile.industry);
+        if (category) setAddDraft((d) => (categoryTouched ? d : { ...d, category }));
+      } catch (e) {
+        if (addDraft.ticker.trim().toUpperCase() === ticker) setAddLookupStatus("notfound");
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [addDraft.ticker, showAdd, settings.apiKey]);
 
   async function submitAdd() {
     const ticker = addDraft.ticker.trim().toUpperCase();
@@ -663,7 +829,14 @@ export default function App() {
     if (isNaN(low)) low = price;
     if (low > high) [low, high] = [high, low];
 
-    const next = [...stocks, { ticker, name: name || ticker, category, price, high, low, shares: null, cost: null, archived: false, ret13w: null, ret26w: null, sma50: null, sma200: null, smaAsOf: null }];
+    const next = [
+      ...stocks,
+      {
+        ticker, name: name || ticker, category, price, high, low, shares: null, cost: null, archived: false,
+        ret13w: null, ret26w: null, prevClose: null, dayOpen: null, dayHigh: null, dayLow: null,
+        marketCap: null, peRatio: null, dividendYield: null, beta: null, lots: [],
+      },
+    ];
     setStocks(next);
     persist(next);
     recordSnapshot({ [ticker]: price });
@@ -685,6 +858,66 @@ export default function App() {
     setEditing(null);
   }
 
+  async function fetchInsights(ticker) {
+    if (!settings.apiKey) return;
+    setInsights((prev) => ({ ...prev, [ticker]: { ...(prev[ticker] || {}), loading: true } }));
+    const apiKey = settings.apiKey;
+    const today = new Date();
+    const newsFrom = new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
+    const newsTo = today.toISOString().slice(0, 10);
+    const earningsFrom = today.toISOString().slice(0, 10);
+    const earningsTo = new Date(today.getTime() + 120 * 86400000).toISOString().slice(0, 10);
+
+    const [newsResult, earningsResult, recResult] = await Promise.allSettled([
+      fetch(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(ticker)}&from=${newsFrom}&to=${newsTo}&token=${apiKey}`).then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`news HTTP ${r.status}`))
+      ),
+      fetch(`https://finnhub.io/api/v1/calendar/earnings?from=${earningsFrom}&to=${earningsTo}&symbol=${encodeURIComponent(ticker)}&token=${apiKey}`).then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`earnings HTTP ${r.status}`))
+      ),
+      fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${encodeURIComponent(ticker)}&token=${apiKey}`).then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`recommendation HTTP ${r.status}`))
+      ),
+    ]);
+
+    const news = newsResult.status === "fulfilled" && Array.isArray(newsResult.value) ? newsResult.value.slice(0, 3) : null;
+    const newsError = newsResult.status === "rejected" ? newsResult.reason.message : null;
+
+    let nextEarnings = null, earningsError = null;
+    if (earningsResult.status === "fulfilled") {
+      const calendar = (earningsResult.value && earningsResult.value.earningsCalendar) || [];
+      if (calendar.length) nextEarnings = calendar.slice().sort((a, b) => (a.date < b.date ? -1 : 1))[0].date;
+    } else {
+      earningsError = earningsResult.reason.message;
+    }
+
+    let recommendation = null, recError = null;
+    if (recResult.status === "fulfilled" && Array.isArray(recResult.value) && recResult.value.length) {
+      recommendation = recResult.value[0];
+    } else if (recResult.status === "rejected") {
+      recError = recResult.reason.message;
+    }
+
+    setInsights((prev) => ({
+      ...prev,
+      [ticker]: { news, newsError, nextEarnings, earningsError, recommendation, recError, loading: false, fetchedAt: Date.now() },
+    }));
+  }
+
+  function toggleExpanded(ticker) {
+    const next = !expanded[ticker];
+    setExpanded((prev) => ({ ...prev, [ticker]: next }));
+    if (next && settings.apiKey) {
+      const cached = insights[ticker];
+      const stale = !cached || !cached.fetchedAt || Date.now() - cached.fetchedAt > INSIGHTS_CACHE_MS;
+      if (stale && !(cached && cached.loading)) fetchInsights(ticker);
+    }
+  }
+
+  function setDetailRange(ticker, days) {
+    setDetailRangeMap((prev) => ({ ...prev, [ticker]: days }));
+  }
+
   function openEdit(ticker) {
     const s = stocks.find((x) => x.ticker === ticker);
     setEditing(ticker);
@@ -694,6 +927,7 @@ export default function App() {
       cost: s.cost != null ? String(s.cost) : "",
       category: s.category,
     });
+    setLotDraft({ shares: "", cost: "" });
   }
 
   function saveEdit() {
@@ -706,13 +940,16 @@ export default function App() {
       if (s.ticker !== editing) return s;
       const high = Math.max(s.high, price);
       const low = Math.min(s.low, price);
+      const hasLots = s.lots && s.lots.length > 0;
       return {
         ...s,
         price,
         high,
         low,
-        shares: shares != null && !isNaN(shares) && shares > 0 ? shares : null,
-        cost: cost != null && !isNaN(cost) && cost > 0 ? cost : null,
+        // Once a ticker is tracked as lots, shares/cost are derived — the plain fields
+        // aren't editable here anymore, so leave them untouched.
+        shares: hasLots ? s.shares : shares != null && !isNaN(shares) && shares > 0 ? shares : null,
+        cost: hasLots ? s.cost : cost != null && !isNaN(cost) && cost > 0 ? cost : null,
         category: category || s.category,
       };
     });
@@ -723,10 +960,71 @@ export default function App() {
   }
 
   function clearPosition() {
-    const next = stocks.map((s) => (s.ticker === editing ? { ...s, shares: null, cost: null } : s));
+    const next = stocks.map((s) => (s.ticker === editing ? { ...s, shares: null, cost: null, lots: [] } : s));
     setStocks(next);
     persist(next);
     setEditing(null);
+  }
+
+  function convertToLots() {
+    const stock = stocks.find((s) => s.ticker === editing);
+    if (!stock) return;
+    const shares = parseFloat(draft.shares);
+    const cost = parseFloat(draft.cost);
+    const seedLots =
+      !isNaN(shares) && shares > 0 && !isNaN(cost) && cost > 0
+        ? [{ id: `${stock.ticker}-legacy`, shares, cost, date: dateKey(Date.now()) }]
+        : [];
+    const next = stocks.map((s) => {
+      if (s.ticker !== editing) return s;
+      const agg = aggregateLots(seedLots);
+      return { ...s, lots: seedLots, shares: agg.shares, cost: agg.cost };
+    });
+    setStocks(next);
+    persist(next);
+  }
+
+  function addLot() {
+    const shares = parseFloat(lotDraft.shares);
+    const cost = parseFloat(lotDraft.cost);
+    if (isNaN(shares) || shares <= 0 || isNaN(cost) || cost <= 0) return;
+    const next = stocks.map((s) => {
+      if (s.ticker !== editing) return s;
+      const existingLots =
+        s.lots && s.lots.length
+          ? s.lots
+          : s.shares
+            ? [{ id: `${s.ticker}-legacy`, shares: s.shares, cost: s.cost, date: dateKey(Date.now()) }]
+            : [];
+      const lots = [...existingLots, { id: `${s.ticker}-${Date.now()}`, shares, cost, date: dateKey(Date.now()) }];
+      const agg = aggregateLots(lots);
+      return { ...s, lots, shares: agg.shares, cost: agg.cost };
+    });
+    setStocks(next);
+    persist(next);
+    setLotDraft({ shares: "", cost: "" });
+  }
+
+  function sellLot(ticker, lotId) {
+    const stock = stocks.find((s) => s.ticker === ticker);
+    if (!stock || !stock.lots) return;
+    const lot = stock.lots.find((l) => l.id === lotId);
+    if (!lot) return;
+    const gain = lot.shares * (stock.price - lot.cost);
+    const nextRealized = [
+      ...realizedGains,
+      { ticker, shares: lot.shares, cost: lot.cost, sellPrice: stock.price, date: new Date().toISOString(), gain },
+    ];
+    setRealizedGains(nextRealized);
+    persistRealized(nextRealized);
+    const next = stocks.map((s) => {
+      if (s.ticker !== ticker) return s;
+      const lots = s.lots.filter((l) => l.id !== lotId);
+      const agg = aggregateLots(lots);
+      return { ...s, lots, shares: agg.shares, cost: agg.cost };
+    });
+    setStocks(next);
+    persist(next);
   }
 
   const categories = ["All", ...Array.from(new Set(stocks.filter((s) => !s.archived).map((s) => s.category)))];
@@ -747,6 +1045,8 @@ export default function App() {
   });
   const totalReturn = totalValue - totalCost;
   const totalReturnPct = totalCost > 0 ? totalReturn / totalCost : 0;
+  const portfolioTotal = totalValue + settings.cash;
+  const realizedTotal = realizedGains.reduce((sum, r) => sum + r.gain, 0);
 
   let concentration = null;
   if (buySignals >= 2) {
@@ -754,6 +1054,15 @@ export default function App() {
     const share = topCount / buySignals;
     if (share >= 0.5) concentration = { category: topCategory, count: topCount, total: buySignals, share };
   }
+
+  const overweightPositions =
+    portfolioTotal > 0
+      ? stocks
+          .filter((s) => s.shares)
+          .map((s) => ({ ticker: s.ticker, share: (s.shares * s.price) / portfolioTotal }))
+          .filter((s) => s.share > settings.maxPositionPct)
+          .sort((a, b) => b.share - a.share)
+      : [];
 
   const visible = stocks
     .filter((s) => (showArchived ? s.archived : !s.archived))
@@ -783,6 +1092,12 @@ export default function App() {
         .icon-btn:hover { border-color: #3A4A68; }
         .icon-btn.icon-only { padding: 8px; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
         .icon-btn:disabled { cursor: not-allowed; }
+        .card-edit-btn { cursor: pointer; border: none; background: transparent; color: #6B7690; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .card-edit-btn:hover { background: #0B1220; color: #E8EDF5; }
+        .card-expand-toggle { cursor: pointer; width: 100%; background: transparent; border: none; border-top: 1px solid #1C2740; color: #6B7690; font-size: 11px; font-weight: 500; padding: 8px 0 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .card-expand-toggle:hover { color: #8A96AC; }
+        .card-expand-toggle svg { transition: transform 0.15s ease; }
+        .card-expand-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
         input[type=text], input[type=number] { background: #0B1220; border: 1px solid #223049; color: #E8EDF5; padding: 9px 10px; border-radius: 6px; font-size: 14px; width: 100%; font-family: ui-monospace, monospace; min-height: 36px; }
         input[type=checkbox] { min-height: auto; width: 16px; height: 16px; }
         input:focus { outline: none; border-color: #E8A33D; }
@@ -803,13 +1118,11 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div role="status" aria-live="polite" style={{ color: "#7C89A3", fontSize: 11.5, fontFamily: "ui-monospace, monospace", textAlign: "right" }}>
               {pushMsg && pushMsg}
-              {!pushMsg && smaRefreshing && "updating SMAs..."}
-              {!pushMsg && !smaRefreshing && refreshing && "refreshing..."}
-              {!pushMsg && !smaRefreshing && !refreshing && saveState === "saving" && "saving..."}
-              {!pushMsg && !smaRefreshing && !refreshing && saveState === "saved" && "saved ✓"}
-              {!pushMsg && !smaRefreshing && !refreshing && saveState === "error" && "save failed"}
-              {!pushMsg && !smaRefreshing && !refreshing && saveState === "idle" && lastUpdated && `updated ${lastUpdated.toLocaleTimeString()}`}
-              {!pushMsg && !smaRefreshing && !refreshing && saveState === "idle" && !lastUpdated && smaUpdated && `SMAs updated ${smaUpdated.toLocaleTimeString()}`}
+              {!pushMsg && refreshing && "refreshing..."}
+              {!pushMsg && !refreshing && saveState === "saving" && "saving..."}
+              {!pushMsg && !refreshing && saveState === "saved" && "saved ✓"}
+              {!pushMsg && !refreshing && saveState === "error" && "save failed"}
+              {!pushMsg && !refreshing && saveState === "idle" && lastUpdated && `updated ${lastUpdated.toLocaleTimeString()}`}
             </div>
             {settings.sheetSync.enabled && (
               <button type="button" className="icon-btn" onClick={() => pushToSheet()} disabled={pushing} style={{ opacity: pushing ? 0.6 : 1 }}>
@@ -818,9 +1131,6 @@ export default function App() {
             )}
             <button type="button" className="icon-btn" onClick={refreshLive} disabled={refreshing} style={{ opacity: refreshing ? 0.6 : 1 }}>
               {settings.apiKey ? (refreshing ? "Refreshing..." : "Refresh live") : "Connect live data"}
-            </button>
-            <button type="button" className="icon-btn" onClick={refreshSma} disabled={smaRefreshing} style={{ opacity: smaRefreshing ? 0.6 : 1 }} title="Daily close data from Stooq, used for 50/200-day SMA trend">
-              {smaRefreshing ? "Updating SMAs..." : "Update SMAs"}
             </button>
             <button className="icon-btn icon-only" onClick={openSettings} aria-label="Settings" title="Settings" type="button">
               <span aria-hidden="true">⚙</span>
@@ -841,19 +1151,32 @@ export default function App() {
           </div>
         )}
 
-        {smaErrors.length > 0 && (
-          <div role="alert" style={{ background: "#412402", border: "1px solid #633806", color: "#FAC775", fontSize: 12, borderRadius: 8, padding: "10px 12px", marginBottom: 12, lineHeight: 1.6 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>SMA update failed for {smaErrors.length} ticker{smaErrors.length > 1 ? "s" : ""}:</div>
-            {smaErrors.slice(0, 6).map((msg, i) => (
-              <div key={i} className="mono" style={{ fontSize: 11, wordBreak: "break-word" }}>{msg}</div>
-            ))}
-            {smaErrors.length > 6 && <div style={{ fontSize: 11 }}>...and {smaErrors.length - 6} more (same pattern).</div>}
+        {newSignals && newSignals.length > 0 && (
+          <div role="status" style={{ background: "#04342C", border: "1px solid #0C5C4C", color: "#8FE6C8", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span>
+              New since your last visit: <strong>{newSignals.join(", ")}</strong> hit your dip target.
+            </span>
+            <button type="button" className="icon-btn" style={{ padding: "3px 9px", fontSize: 11, flexShrink: 0 }} onClick={() => setNewSignals(null)}>Dismiss</button>
           </div>
         )}
 
         {concentration && (
-          <div role="status" style={{ background: "#501313", border: "1px solid #791F1F", color: "#F09595", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 20 }}>
+          <div role="status" style={{ background: "#501313", border: "1px solid #791F1F", color: "#F09595", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>
             {concentration.count} of {concentration.total} buy signals are in <strong>{concentration.category}</strong> ({Math.round(concentration.share * 100)}%) — likely one sector-wide move, not {concentration.total} independent opportunities.
+          </div>
+        )}
+
+        {overweightPositions.length > 0 && (
+          <div role="status" style={{ background: "#501313", border: "1px solid #791F1F", color: "#F09595", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 20 }}>
+            {overweightPositions.length === 1 ? (
+              <>
+                <strong>{overweightPositions[0].ticker}</strong> is {Math.round(overweightPositions[0].share * 100)}% of your portfolio — above your {Math.round(settings.maxPositionPct * 100)}% limit.
+              </>
+            ) : (
+              <>
+                Over your {Math.round(settings.maxPositionPct * 100)}% position limit: {overweightPositions.map((o) => `${o.ticker} (${Math.round(o.share * 100)}%)`).join(", ")}.
+              </>
+            )}
           </div>
         )}
 
@@ -861,6 +1184,11 @@ export default function App() {
           <StatCard label="Positions held" value={String(positionCount)} />
           <StatCard label="Cost basis" value={fmtMoney(totalCost, 0)} />
           <StatCard label="Current value" value={fmtMoney(totalValue, 0)} />
+          <StatCard label="Cash" value={fmtMoney(settings.cash, 0)} />
+          <StatCard label="Portfolio total" value={fmtMoney(portfolioTotal, 0)} />
+          {realizedGains.length > 0 && (
+            <StatCard label="Realized P&L" value={fmtMoney(realizedTotal, 0)} tone={realizedTotal >= 0 ? "up" : "down"} />
+          )}
           <StatCard label="Total return" value={`${fmtMoney(totalReturn, 0)} (${fmtPct(totalReturnPct)})`} tone={totalReturn >= 0 ? "up" : "down"} />
           <StatCard label={`Buy signals (${Math.round(BUY_TARGET * 100)}%)`} value={String(buySignals)} tone={buySignals > 0 ? "buy" : undefined} />
         </div>
@@ -895,63 +1223,99 @@ export default function App() {
             const posReturn = posValue - posCost;
             const posReturnPct = posCost > 0 ? posReturn / posCost : 0;
             const catColor = CATEGORY_COLOR[s.category] || "#8A96AC";
+            const hasLots = s.lots && s.lots.length > 0;
             const trend = getTrend(history[s.ticker], settings.trendWindowDays);
-            const sparkW = 88, sparkH = 24;
-            const sparkPath = trend ? sparklinePath(trend.points, sparkW, sparkH) : "";
             const trendUp = trend && trend.pct >= 0;
-            const trendCtx = classifyTrendCombined(s.price, s.sma50, s.sma200, s.ret13w, s.ret26w);
+            const trendCtx = classifyTrend(s.ret13w, s.ret26w);
+            const isExpanded = !!expanded[s.ticker];
 
             return (
               <div
                 key={s.ticker}
                 className="stock-card"
+                onClick={(e) => {
+                  if (!e.target.closest('button, a, input, textarea, select, label, [role="button"]')) toggleExpanded(s.ticker);
+                }}
                 style={{
                   background: "#131C2E",
                   border: !s.archived && inBuyZone ? "1px solid #E8A33D" : "1px solid #223049",
                   borderRadius: 12,
                   padding: "16px 16px 14px",
                   opacity: s.archived ? 0.6 : 1,
+                  cursor: "pointer",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                       <h3 className="mono" style={{ color: "#E8EDF5", fontSize: 17, fontWeight: 700, margin: 0 }}>{s.ticker}</h3>
                       {!s.archived && inBuyZone && <span className="pill" style={{ background: "#412402", color: "#FAC775" }}>Buy zone</span>}
-                      {hasPosition && <span className="pill" style={{ background: "#04342C", color: "#5DCAA5" }}>Holding</span>}
                       {s.archived && <span className="pill" style={{ background: "#2C2C2A", color: "#B4B2A9" }}>Archived</span>}
                     </div>
-                    <div style={{ color: "#8A96AC", fontSize: 12.5, marginTop: 2 }}>{s.name}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: catColor, fontWeight: 600 }}>{s.category}</span>
+                      <span style={{ color: "#8A96AC", fontSize: 12 }}>· {s.name}</span>
+                    </div>
                   </div>
                   <button
                     type="button"
-                    className="icon-btn"
-                    style={{ padding: "5px 12px", fontSize: 12 }}
+                    className="card-edit-btn"
                     onClick={() => openEdit(s.ticker)}
                     aria-label={`Edit ${s.ticker}`}
+                    title="Edit"
                   >
-                    Edit
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M11.5 2.5l2 2L5 13H3v-2l8.5-8.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
-                  <span className="mono" style={{ color: "#E8EDF5", fontSize: 20, fontWeight: 700 }}>{fmtMoney(s.price)}</span>
-                  <span className="mono" style={{ fontSize: 13, fontWeight: 600, color: dip <= BUY_TARGET ? "#FAC775" : "#E1636B" }}>{fmtPct(dip)} from high</span>
-                  <span style={{ marginLeft: "auto", fontSize: 11, color: catColor, fontWeight: 600 }}>{s.category}</span>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 9, flexWrap: "wrap", marginBottom: 12 }}>
+                  <span className="mono" style={{ color: "#E8EDF5", fontSize: 24, fontWeight: 700, letterSpacing: "-0.01em" }}>{fmtMoney(s.price)}</span>
+                  {s.prevClose != null && (() => {
+                    const dayChange = (s.price - s.prevClose) / s.prevClose;
+                    const up = dayChange >= 0;
+                    return (
+                      <span className="mono" style={{ fontSize: 12.5, fontWeight: 600, color: up ? "#5DCAA5" : "#E1636B" }}>
+                        {up ? "▲" : "▼"} {(Math.abs(dayChange) * 100).toFixed(1)}% today
+                      </span>
+                    );
+                  })()}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, height: sparkH }}>
+                <div style={{ position: "relative", height: 22, marginBottom: 6 }} aria-hidden="true">
+                  <div style={{ position: "absolute", inset: "6px 0", background: "#0B1220", borderRadius: 999, border: "1px solid #1C2740" }} />
+                  <div style={{ position: "absolute", top: 6, bottom: 6, left: 0, width: `${pos * 100}%`, background: inBuyZone ? "#E8A33D" : "#3A4A68", borderRadius: 999 }} />
+                  <div style={{ position: "absolute", top: 0, bottom: 0, left: `${pos * 100}%`, width: 2, background: "#E8EDF5", boxShadow: "0 0 0 3px #131C2E" }} />
+                  <div style={{ position: "absolute", top: 2, bottom: 2, left: `${targetPos * 100}%`, width: 2, background: "#E1636B", opacity: 0.85 }} title="Buy target" />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 10.5, color: "#7C89A3", marginBottom: 12 }} className="mono">
+                  <span>{fmtMoney(s.low, 0)} low</span>
+                  <span style={inBuyZone ? { color: "#FAC775", fontWeight: 700 } : undefined}>
+                    {fmtPct(dip)} from high{!s.archived && inBuyZone ? " — in buy zone" : ""}
+                  </span>
+                  <span>{fmtMoney(s.high, 0)} high</span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12, minHeight: 20 }}>
                   {trend ? (
                     <>
-                      <svg aria-hidden="true" width={sparkW} height={sparkH} viewBox={`0 0 ${sparkW} ${sparkH}`}>
-                        <path d={sparkPath} fill="none" stroke={trendUp ? "#5DCAA5" : "#E1636B"} strokeWidth="1.5" />
+                      <svg aria-hidden="true" width="72" height="20" viewBox="0 0 72 20">
+                        <path d={sparklinePath(trend.points, 72, 20)} fill="none" stroke={trendUp ? "#5DCAA5" : "#E1636B"} strokeWidth="1.5" strokeLinecap="round" />
                       </svg>
-                      <span className="mono" style={{ fontSize: 12, fontWeight: 600, color: trendUp ? "#5DCAA5" : "#E1636B" }}>
-                        {fmtPct(trend.pct)} / {settings.trendWindowDays}d
+                      <span className="mono" style={{ fontSize: 11.5, fontWeight: 600, color: trendUp ? "#5DCAA5" : "#E1636B" }}>
+                        {fmtPct(trend.pct)}/{settings.trendWindowDays}d
                       </span>
+                      {trendCtx && (
+                        <>
+                          <span style={{ color: "#1C2740" }}>•</span>
+                          <span className="pill" style={{ background: trendCtx.bg, color: trendCtx.color }}>{trendCtx.label}</span>
+                        </>
+                      )}
                     </>
                   ) : (
-                    <span style={{ fontSize: 11.5, color: "#7C89A3" }}>
+                    <span style={{ fontSize: 11, color: "#7C89A3" }}>
                       {history[s.ticker] && history[s.ticker].length === 1
                         ? "1 price recorded — check in again to draw the trend."
                         : "No price history yet."}
@@ -959,35 +1323,145 @@ export default function App() {
                   )}
                 </div>
 
-                {trendCtx && (
-                  <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span className="pill" style={{ background: trendCtx.bg, color: trendCtx.color }}>{trendCtx.label}</span>
-                    {trendCtx.source === "sma" && (
-                      <span className="mono" style={{ fontSize: 10.5, color: "#7C89A3" }}>
-                        50d {fmtMoney(s.sma50, 0)} · 200d {fmtMoney(s.sma200, 0)} · as of {s.smaAsOf}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div aria-hidden="true" style={{ position: "relative", height: 10, background: "#0B1220", borderRadius: 999, marginBottom: 6, border: "1px solid #1C2740" }}>
-                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pos * 100}%`, background: inBuyZone ? "#E8A33D" : "#3A4A68", borderRadius: 999 }} />
-                  <div style={{ position: "absolute", left: `${targetPos * 100}%`, top: -3, bottom: -3, width: 2, background: "#E1636B" }} title="Buy target" />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "#7C89A3", marginBottom: 12 }} className="mono">
-                  <span>{fmtMoney(s.low, 0)} low</span>
-                  <span>{fmtMoney(s.high, 0)} high</span>
-                </div>
-
                 {hasPosition ? (
                   <div style={{ borderTop: "1px solid #1C2740", paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 12.5 }} className="mono">
-                    <span style={{ color: "#8A96AC" }}>{s.shares} sh @ {fmtMoney(s.cost)}</span>
+                    <span style={{ color: "#8A96AC" }}>
+                      {s.shares} sh @ {fmtMoney(s.cost)}
+                      {hasLots && <span style={{ color: "#6B7690" }}> · {s.lots.length} lot{s.lots.length > 1 ? "s" : ""}</span>}
+                    </span>
                     <span style={{ color: posReturn >= 0 ? "#5DCAA5" : "#E1636B", fontWeight: 700 }}>
                       {fmtMoney(posReturn)} ({fmtPct(posReturnPct)})
                     </span>
                   </div>
                 ) : (
                   <div style={{ borderTop: "1px solid #1C2740", paddingTop: 10, fontSize: 12, color: "#7C89A3" }}>No position</div>
+                )}
+
+                <button
+                  type="button"
+                  className="card-expand-toggle"
+                  onClick={() => toggleExpanded(s.ticker)}
+                  aria-expanded={isExpanded}
+                  aria-controls={`details-${s.ticker}`}
+                  aria-label={`${isExpanded ? "Hide" : "Show"} details for ${s.ticker}`}
+                >
+                  Details
+                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+                    <path d="M1 3l3.5 3L8 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {isExpanded && (
+                  <div id={`details-${s.ticker}`} style={{ borderTop: "1px solid #1C2740", marginTop: 12, paddingTop: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, color: "#7C89A3", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Price history</span>
+                      <div role="group" aria-label={`Chart range for ${s.ticker}`} style={{ display: "flex", gap: 4 }}>
+                        {["7", "30", "90"].map((d) => {
+                          const active = (detailRangeMap[s.ticker] || String(settings.trendWindowDays)) === d;
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              className={`filter-btn ${active ? "active" : ""}`}
+                              style={{ padding: "2px 8px", fontSize: 10.5, minHeight: "auto" }}
+                              aria-pressed={active}
+                              onClick={() => setDetailRange(s.ticker, d)}
+                            >
+                              {d}d
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const days = parseInt(detailRangeMap[s.ticker] || String(settings.trendWindowDays), 10);
+                      const cutoff = Date.now() - days * 86400000;
+                      const points = (history[s.ticker] || []).filter((p) => p.t >= cutoff);
+                      if (points.length < 2) {
+                        return <div style={{ fontSize: 11.5, color: "#7C89A3", marginBottom: 14 }}>Not enough recorded history in this window yet.</div>;
+                      }
+                      const chartW = 280, chartH = 70;
+                      const path = sparklinePath(points, chartW, chartH);
+                      const chartUp = points[points.length - 1].price >= points[0].price;
+                      const min = Math.min(...points.map((p) => p.price));
+                      const max = Math.max(...points.map((p) => p.price));
+                      return (
+                        <div style={{ marginBottom: 14 }}>
+                          <svg aria-hidden="true" width="100%" height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="none">
+                            <path d={path} fill="none" stroke={chartUp ? "#5DCAA5" : "#E1636B"} strokeWidth="1.6" />
+                          </svg>
+                          <div className="mono" style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#7C89A3" }}>
+                            <span>{fmtMoney(min, 0)}</span>
+                            <span>{fmtMoney(max, 0)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 16px" }}>
+                      <DetailRow label="Prev close" value={s.prevClose != null ? fmtMoney(s.prevClose) : "—"} />
+                      <DetailRow label="Open" value={s.dayOpen != null ? fmtMoney(s.dayOpen) : "—"} />
+                      <DetailRow label="Day range" value={s.dayLow != null && s.dayHigh != null ? `${fmtMoney(s.dayLow, 0)}–${fmtMoney(s.dayHigh, 0)}` : "—"} />
+                      <DetailRow label="52w range" value={`${fmtMoney(s.low, 0)}–${fmtMoney(s.high, 0)}`} />
+                      <DetailRow label="Market cap" value={s.marketCap != null ? fmtMarketCap(s.marketCap) : "—"} />
+                      <DetailRow label="P/E (TTM)" value={s.peRatio != null ? s.peRatio.toFixed(1) : "—"} />
+                      <DetailRow label="Div yield" value={s.dividendYield != null ? fmtPct(s.dividendYield) : "—"} />
+                      <DetailRow label="Beta" value={s.beta != null ? s.beta.toFixed(2) : "—"} />
+                    </div>
+                    {s.prevClose == null && s.marketCap == null && (
+                      <div style={{ fontSize: 11, color: "#7C89A3", marginTop: 10 }}>These stats fill in after "Refresh live."</div>
+                    )}
+
+                    {settings.apiKey ? (
+                      <div style={{ marginTop: 12, borderTop: "1px solid #1C2740", paddingTop: 12 }}>
+                        {(() => {
+                          const data = insights[s.ticker];
+                          if (!data || data.loading) {
+                            return <div style={{ fontSize: 11.5, color: "#7C89A3" }}>Loading news, earnings date, analyst views...</div>;
+                          }
+                          return (
+                            <>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 16px", marginBottom: 12 }}>
+                                <DetailRow label="Next earnings" value={data.nextEarnings || (data.earningsError ? "Unavailable" : "None in 120d")} />
+                                <DetailRow
+                                  label="Analyst view"
+                                  value={
+                                    data.recommendation
+                                      ? `${data.recommendation.strongBuy + data.recommendation.buy}B · ${data.recommendation.hold}H · ${data.recommendation.sell + data.recommendation.strongSell}S`
+                                      : "Unavailable"
+                                  }
+                                />
+                              </div>
+                              <div style={{ fontSize: 11, color: "#7C89A3", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Recent news</div>
+                              {data.news && data.news.length ? (
+                                data.news.slice(0, 3).map((item, i) => (
+                                  <a
+                                    key={i}
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: "block", fontSize: 12, color: "#7F9CF5", marginBottom: 8, textDecoration: "none", lineHeight: 1.4 }}
+                                  >
+                                    {item.headline}
+                                    <span style={{ display: "block", fontSize: 10.5, color: "#7C89A3" }}>
+                                      {item.source}{item.datetime ? ` · ${new Date(item.datetime * 1000).toLocaleDateString()}` : ""}
+                                    </span>
+                                  </a>
+                                ))
+                              ) : (
+                                <div style={{ fontSize: 12, color: "#7C89A3" }}>{data.newsError ? "Unavailable" : "No recent headlines."}</div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: "#7C89A3", marginTop: 12, borderTop: "1px solid #1C2740", paddingTop: 12 }}>
+                        Connect live data in Settings for news, next earnings date, and analyst consensus.
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -1022,27 +1496,35 @@ export default function App() {
             </AboutSection>
 
             <AboutSection title="Trend & sparkline">
-              History for the sparkline builds up automatically, three ways: once per day whenever you open the app (using whatever price is already stored — no network needed), whenever you refresh live prices or manually edit one, and in bulk from "Update SMAs," which pulls Stooq's actual daily closing history and backfills months of real data in one go. The sparkline and "±X% / Nd" figure use whichever points fall inside your chosen trend window (7/30/90 days in Settings).
+              History for the sparkline builds up automatically two ways: once per day whenever you open the app (using whatever price is already stored — no network needed), and whenever you refresh live prices or manually edit one. The sparkline and "±X% / Nd" figure use whichever points fall inside your chosen trend window (7/30/90 days in Settings).
             </AboutSection>
 
-            <AboutSection title="Trend context (50/200-day SMA)">
-              "Update SMAs" pulls daily closing prices from Stooq (free, no key) and computes true 50-day and 200-day simple moving averages. The pill compares current price against both: above both → "Above 50/200-day SMA," below both → "Below 50/200-day SMA," split → "Between 50/200-day SMA." This is a daily figure, not live — it only needs to move once a day, since a moving average doesn't shift meaningfully within a session. New listings (like SPCX, IPO'd June 2026) won't have 200 trading days of history yet, so their 200-day SMA — and sometimes the 50-day too — will read as unavailable until enough time passes. If a ticker has no SMA data, the pill falls back to the Finnhub 13w/26w return proxy described below.
-            </AboutSection>
-
-            <AboutSection title="Trend proxy (fallback)">
-              Before an SMA update, or for tickers Stooq can't resolve, the pill instead uses Finnhub's 13-week and 26-week price return figures — both positive → "Pullback in uptrend (proxy)," both negative → "Downtrend — caution (proxy)," mixed → "Mixed / choppy (proxy)." This exists because Finnhub's own historical daily candles are paywalled on the free tier (403 on that endpoint), so a true SMA isn't reachable from a Finnhub key alone — hence pulling daily closes from Stooq separately.
-            </AboutSection>
-
-            <AboutSection title="A note on Stooq">
-              Stooq has no official API or CORS support, so this app tries a direct request first and falls back to a public CORS proxy (allorigins.win) if that's blocked by your browser. Both are free and unauthenticated, which means occasional flakiness or missing tickers is possible — treat SMA gaps as "try again later," not as a data problem with your portfolio.
+            <AboutSection title="Trend context">
+              A colored pill built from Finnhub's 13-week and 26-week price return figures — both positive → "Pullback in uptrend," both negative → "Downtrend — caution," mixed → "Mixed / choppy." This is a proxy for a true 50/200-day moving-average crossover, not the real thing: Finnhub's historical daily candles are paywalled on the free tier, and a separate free source (Stooq) turned out to be unreliable through any public CORS proxy, so a true SMA isn't currently reachable without a paid data source. The 13w/26w figures are the closest free substitute for "is this dip inside a longer uptrend or a longer downtrend."
             </AboutSection>
 
             <AboutSection title="Concentration warning">
               If half or more of your active buy signals land in a single category, a banner flags it. The dip gauge treats every ticker independently, but AI infrastructure names are correlated — five buy signals in "Memory" on the same day is usually one macro or sector move, not five separate opportunities.
             </AboutSection>
 
+            <AboutSection title="Expanded details">
+              Tap "Details" on any card for a bigger price chart (7/30/90-day toggle, built from the same recorded snapshots as the sparkline) plus a stats grid: previous close, day's open, day range, 52-week range, market cap, P/E (TTM), dividend yield, and beta. The extra stats come from the same Finnhub call already used for 52-week high/low, so they cost nothing extra — but they only populate after a live refresh; a fresh add shows placeholders until then. Expanding also lazy-loads recent news, the next earnings date, and analyst buy/hold/sell counts — these use separate Finnhub calls fetched only for the ticker you actually open (not during bulk refresh, to avoid burning through rate limits), cached for a day per ticker.
+            </AboutSection>
+
+            <AboutSection title="Cash & position size">
+              Set uninvested cash in Settings so "Portfolio total" reflects real dry powder, not just what's already deployed. A warning banner fires if any single position exceeds your configured max position size (default 25% of portfolio total) — sizing risk that dip % alone never surfaces.
+            </AboutSection>
+
+            <AboutSection title="What's new & notifications">
+              On open, the app compares today's buy-zone tickers against what was flagged last time you opened it, and banners anything new (first-ever launch is suppressed so it isn't just listing everything). If you enable browser notifications in Settings, a "Refresh live" that turns up a new signal will also fire a notification — this only works while the app is open and you trigger a refresh, since true background push would need a server this app doesn't have.
+            </AboutSection>
+
+            <AboutSection title="Backup & export">
+              Settings has a full JSON backup (everything: tickers, positions, history, settings — including your API key in plain text, so treat the file like a password) and a CSV export for spreadsheets. Importing a JSON backup replaces everything currently in the app.
+            </AboutSection>
+
             <AboutSection title="Position & return">
-              Shares × cost basis vs. shares × current price gives return $ and return %. Cost basis is your average cost per share, entered manually.
+              Shares × cost basis vs. shares × current price gives return $ and return %. For a simple position, cost basis is one average cost per share, entered manually. If you'd rather track individual buys separately — different prices, different dates — click "Track as multiple lots instead" in the edit panel. Once lots exist, the plain shares/cost fields disappear and become derived automatically (a weighted average across all lots); each lot shows its own paper gain and can be sold independently at the current price, which logs a realized gain/loss entry and removes just that lot. A "Realized P&L" stat card appears once you've sold at least one lot.
             </AboutSection>
 
             <AboutSection title="Live data">
@@ -1054,11 +1536,15 @@ export default function App() {
             </AboutSection>
 
             <AboutSection title="Categories & archive">
-              Categories are freeform tags you control, editable per ticker. Archiving hides a ticker from the main view and buy-signal count without deleting its data or position.
+              Categories are freeform tags you control, editable per ticker. Archiving hides a ticker from the main view and buy-signal count without deleting its data or position. When adding a new ticker with live data connected, typing a symbol looks up its company name and industry from Finnhub and suggests a category — matched against your existing categories where the industry clearly fits (e.g. "Semiconductors" → Chipmaker), or Finnhub's raw industry label otherwise. Either field can be overwritten by typing in it directly, which stops any further auto-fill for that field on that ticker.
             </AboutSection>
 
             <div style={{ borderTop: "1px solid #1C2740", paddingTop: 12, marginTop: 4, color: "#7C89A3", fontSize: 11.5, lineHeight: 1.6 }}>
               This is a personal tracking tool, not investment advice. Dip % alone doesn't tell you whether a drop is temporary or structural.
+            </div>
+
+            <div className="mono" style={{ color: "#4A5670", fontSize: 10.5, marginTop: 10, textAlign: "center" }}>
+              v{PLAYPEN_VERSION} · build {BUILD_NUMBER} · {BUILD_DATE}
             </div>
 
             <button type="button" className="icon-btn" style={{ width: "100%", marginTop: 16 }} onClick={() => setShowAbout(false)}>Close</button>
@@ -1066,11 +1552,57 @@ export default function App() {
       )}
 
       {showSettings && (
-        <Modal titleId="settings-title" title="Settings" subtitle="Live pricing, trend window, and sheet sync" onClose={() => setShowSettings(false)} width={420}>
+        <Modal titleId="settings-title" title="Settings" subtitle="Live pricing, trend window, sheet sync, and portfolio guardrails" onClose={() => setShowSettings(false)} width={420}>
             <label htmlFor="setting-buy-target" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Dip target (buy signal fires below this)</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
               <input id="setting-buy-target" type="text" inputMode="decimal" value={settingsDraft.buyTarget} onChange={(e) => setSettingsDraft((d) => ({ ...d, buyTarget: e.target.value }))} placeholder="15" style={{ width: 90 }} />
               <span id="setting-buy-target-suffix" style={{ color: "#8A96AC", fontSize: 13 }}>% below 52-week high</span>
+            </div>
+
+            <label htmlFor="setting-cash" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Uninvested cash</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <span style={{ color: "#8A96AC", fontSize: 13 }}>$</span>
+              <input id="setting-cash" type="text" inputMode="decimal" value={settingsDraft.cash} onChange={(e) => setSettingsDraft((d) => ({ ...d, cash: e.target.value }))} placeholder="0" style={{ width: 140 }} />
+            </div>
+
+            <label htmlFor="setting-max-position" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Max position size (warn above this)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <input id="setting-max-position" type="text" inputMode="decimal" value={settingsDraft.maxPositionPct} onChange={(e) => setSettingsDraft((d) => ({ ...d, maxPositionPct: e.target.value }))} placeholder="25" style={{ width: 90 }} />
+              <span style={{ color: "#8A96AC", fontSize: 13 }}>% of total portfolio</span>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label htmlFor="setting-notify" style={{ display: "flex", alignItems: "center", gap: 8, color: "#8A96AC", fontSize: 12.5, marginBottom: 6, cursor: notifyPermission === "granted" ? "pointer" : "not-allowed" }}>
+                <input
+                  id="setting-notify"
+                  type="checkbox"
+                  checked={settingsDraft.notifyEnabled}
+                  disabled={notifyPermission !== "granted"}
+                  onChange={(e) => setSettingsDraft((d) => ({ ...d, notifyEnabled: e.target.checked }))}
+                  style={{ width: "auto" }}
+                />
+                Notify me of new buy-zone signals
+              </label>
+              {notifyPermission !== "granted" && typeof Notification < "u" && (
+                <button
+                  type="button"
+                  className="icon-btn"
+                  style={{ fontSize: 11.5, padding: "4px 10px" }}
+                  onClick={async () => {
+                    const result = await Notification.requestPermission();
+                    setNotifyPermission(result);
+                    if (result === "granted") setSettingsDraft((d) => ({ ...d, notifyEnabled: true }));
+                  }}
+                >
+                  Enable browser notifications
+                </button>
+              )}
+              {notifyPermission === "unsupported" && (
+                <div style={{ color: "#7C89A3", fontSize: 11 }}>Notifications aren't supported in this browser.</div>
+              )}
+              <div style={{ color: "#7C89A3", fontSize: 11, marginTop: 4, lineHeight: 1.5 }}>
+                Fires while the app is open and you hit "Refresh live" — this isn't background push, since that needs a server this app doesn't have.
+              </div>
             </div>
 
             <label htmlFor="setting-api-key" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Finnhub API key</label>
@@ -1146,6 +1678,31 @@ export default function App() {
               )}
             </div>
 
+            <div style={{ borderTop: "1px solid #1C2740", paddingTop: 14, marginBottom: 14 }}>
+              <span style={{ color: "#E8EDF5", fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Backup & export</span>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                <button type="button" className="icon-btn" style={{ fontSize: 12 }} onClick={exportBackup}>Export backup (.json)</button>
+                <button type="button" className="icon-btn" style={{ fontSize: 12 }} onClick={exportCsv}>Export CSV</button>
+                <label className="icon-btn" style={{ fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
+                  Import backup
+                  <input
+                    type="file"
+                    accept="application/json"
+                    style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0];
+                      if (file) importBackup(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {importMsg && <div role="status" style={{ fontSize: 11.5, color: "#7C89A3" }}>{importMsg}</div>}
+              <div style={{ color: "#7C89A3", fontSize: 11, lineHeight: 1.6 }}>
+                The JSON backup includes your Finnhub key in plain text — treat the file like a password. Importing replaces your current tickers, settings, and history entirely.
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className="icon-btn" style={{ flex: 1, background: "#E8A33D", color: "#412402", border: "none" }} onClick={saveSettings}>Save</button>
               <button type="button" className="icon-btn" onClick={() => setShowSettings(false)}>Cancel</button>
@@ -1164,11 +1721,46 @@ export default function App() {
               {categories.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}
             </datalist>
 
-            <label htmlFor="edit-shares" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Shares owned (optional)</label>
-            <input id="edit-shares" type="text" inputMode="decimal" value={draft.shares} onChange={(e) => setDraft((d) => ({ ...d, shares: e.target.value }))} placeholder="0" style={{ marginBottom: 12 }} />
+            {(() => {
+              const stock = stocks.find((s) => s.ticker === editing);
+              if (stock && stock.lots && stock.lots.length > 0) {
+                return (
+                  <div style={{ marginBottom: 14 }}>
+                    <span style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 6 }}>Lots ({stock.shares} sh @ {fmtMoney(stock.cost)} avg)</span>
+                    {stock.lots.map((lot) => {
+                      const lotGain = lot.shares * (stock.price - lot.cost);
+                      return (
+                        <div key={lot.id} className="mono" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #1C2740" }}>
+                          <span style={{ color: "#E8EDF5" }}>
+                            {lot.shares} sh @ {fmtMoney(lot.cost)}
+                            <span style={{ color: lotGain >= 0 ? "#5DCAA5" : "#E1636B", marginLeft: 6 }}>({fmtMoney(lotGain)})</span>
+                          </span>
+                          <button type="button" className="icon-btn" style={{ fontSize: 10.5, padding: "2px 8px" }} onClick={() => sellLot(editing, lot.id)}>
+                            Sell @ {fmtMoney(stock.price)}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                      <input type="text" inputMode="decimal" value={lotDraft.shares} onChange={(e) => setLotDraft((d) => ({ ...d, shares: e.target.value }))} placeholder="Shares" style={{ flex: 1 }} />
+                      <input type="text" inputMode="decimal" value={lotDraft.cost} onChange={(e) => setLotDraft((d) => ({ ...d, cost: e.target.value }))} placeholder="Cost/sh" style={{ flex: 1 }} />
+                      <button type="button" className="icon-btn" style={{ fontSize: 12, padding: "6px 10px" }} onClick={addLot}>+ Lot</button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <>
+                  <label htmlFor="edit-shares" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Shares owned (optional)</label>
+                  <input id="edit-shares" type="text" inputMode="decimal" value={draft.shares} onChange={(e) => setDraft((d) => ({ ...d, shares: e.target.value }))} placeholder="0" style={{ marginBottom: 12 }} />
 
-            <label htmlFor="edit-cost" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Average cost per share (optional)</label>
-            <input id="edit-cost" type="text" inputMode="decimal" value={draft.cost} onChange={(e) => setDraft((d) => ({ ...d, cost: e.target.value }))} placeholder="0.00" style={{ marginBottom: 18 }} />
+                  <label htmlFor="edit-cost" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Average cost per share (optional)</label>
+                  <input id="edit-cost" type="text" inputMode="decimal" value={draft.cost} onChange={(e) => setDraft((d) => ({ ...d, cost: e.target.value }))} placeholder="0.00" style={{ marginBottom: 8 }} />
+
+                  <button type="button" className="icon-btn" style={{ fontSize: 11.5, padding: "4px 10px", marginBottom: 18 }} onClick={convertToLots}>Track as multiple lots instead</button>
+                </>
+              );
+            })()}
 
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className="icon-btn" style={{ flex: 1, background: "#E8A33D", color: "#412402", border: "none" }} onClick={saveEdit}>Save</button>
@@ -1188,18 +1780,52 @@ export default function App() {
         <Modal
           titleId="add-title"
           title="Add ticker"
-          subtitle={settings.apiKey ? "Leave price fields blank to pull them live." : "Connect live data in settings to auto-fill price and 52-week range."}
+          subtitle={settings.apiKey ? "Type a ticker to auto-fill name, category, and price." : "Connect live data in Settings to auto-fill name, category, and price."}
           onClose={() => setShowAdd(false)}
           width={360}
         >
             <label htmlFor="add-ticker" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Ticker</label>
-            <input id="add-ticker" type="text" value={addDraft.ticker} onChange={(e) => setAddDraft((d) => ({ ...d, ticker: e.target.value.toUpperCase() }))} placeholder="AMD" style={{ marginBottom: 12 }} />
+            <input
+              id="add-ticker"
+              type="text"
+              value={addDraft.ticker}
+              onChange={(e) => setAddDraft((d) => ({ ...d, ticker: e.target.value.toUpperCase() }))}
+              placeholder="AMD"
+              aria-describedby="add-ticker-status"
+              style={{ marginBottom: 4 }}
+            />
+            <div id="add-ticker-status" role="status" style={{ fontSize: 11, color: "#7C89A3", marginBottom: 12, minHeight: 14 }}>
+              {settings.apiKey && addLookupStatus === "loading" && "Looking up..."}
+              {settings.apiKey && addLookupStatus === "found" && "Matched — name and category filled in below (edit freely)."}
+              {settings.apiKey && addLookupStatus === "notfound" && "No match found — enter details manually."}
+            </div>
 
             <label htmlFor="add-name" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Company name (optional)</label>
-            <input id="add-name" type="text" value={addDraft.name} onChange={(e) => setAddDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Advanced Micro Devices" style={{ marginBottom: 12 }} />
+            <input
+              id="add-name"
+              type="text"
+              value={addDraft.name}
+              onChange={(e) => {
+                setNameTouched(true);
+                setAddDraft((d) => ({ ...d, name: e.target.value }));
+              }}
+              placeholder="Advanced Micro Devices"
+              style={{ marginBottom: 12 }}
+            />
 
             <label htmlFor="add-category" style={{ color: "#8A96AC", fontSize: 12, display: "block", marginBottom: 5 }}>Category</label>
-            <input id="add-category" type="text" list="category-options" value={addDraft.category} onChange={(e) => setAddDraft((d) => ({ ...d, category: e.target.value }))} placeholder="Chipmaker" style={{ marginBottom: 12 }} />
+            <input
+              id="add-category"
+              type="text"
+              list="category-options"
+              value={addDraft.category}
+              onChange={(e) => {
+                setCategoryTouched(true);
+                setAddDraft((d) => ({ ...d, category: e.target.value }));
+              }}
+              placeholder="Chipmaker"
+              style={{ marginBottom: 12 }}
+            />
             <datalist id="category-options">
               {categories.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}
             </datalist>
@@ -1246,6 +1872,15 @@ function StatCard({ label, value, tone }) {
     <div style={{ background: "#131C2E", border: "1px solid #223049", borderRadius: 10, padding: "12px 14px" }}>
       <div style={{ color: "#8A96AC", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>{label}</div>
       <div className="mono" style={{ color, fontSize: 18, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+      <span style={{ color: "#7C89A3" }}>{label}</span>
+      <span style={{ color: "#E8EDF5" }}>{value}</span>
     </div>
   );
 }
