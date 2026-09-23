@@ -34,9 +34,9 @@ const DEFAULT_SETTINGS = {
 const MAX_HISTORY_POINTS = 400;
 const MAX_HISTORY_AGE_DAYS = 400;
 const INSIGHTS_CACHE_MS = 86400000;
-const PLAYPEN_VERSION = "1.8.0";
-const BUILD_NUMBER = "8";
-const BUILD_DATE = "2026-07-11";
+const PLAYPEN_VERSION = "1.9.0";
+const BUILD_NUMBER = "10";
+const BUILD_DATE = "2026-09-22";
 
 const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
