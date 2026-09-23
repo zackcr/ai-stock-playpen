@@ -34,8 +34,8 @@ const DEFAULT_SETTINGS = {
 const MAX_HISTORY_POINTS = 400;
 const MAX_HISTORY_AGE_DAYS = 400;
 const INSIGHTS_CACHE_MS = 86400000;
-const PLAYPEN_VERSION = "1.9.0";
-const BUILD_NUMBER = "10";
+const PLAYPEN_VERSION = "1.10.0";
+const BUILD_NUMBER = "11";
 const BUILD_DATE = "2026-09-22";
 
 const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
@@ -230,6 +230,7 @@ export default function App() {
   const [draft, setDraft] = useState({ price: "", shares: "", cost: "", category: "" });
   const [filter, setFilter] = useState("All");
   const [buyOnly, setBuyOnly] = useState(false);
+  const [holdingOnly, setHoldingOnly] = useState(false);
   const [saveState, setSaveState] = useState("idle");
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -1068,6 +1069,7 @@ export default function App() {
     .filter((s) => (showArchived ? s.archived : !s.archived))
     .filter((s) => filter === "All" || s.category === filter)
     .filter((s) => !buyOnly || dipPct(s.price, s.high) <= BUY_TARGET)
+    .filter((s) => !holdingOnly || !!s.shares)
     .sort((a, b) => dipPct(a.price, a.high) - dipPct(b.price, b.high));
 
   if (!loaded) {
@@ -1203,6 +1205,9 @@ export default function App() {
             <button type="button" className="icon-btn" style={{ padding: "6px 14px", fontSize: 12.5, borderRadius: 999 }} onClick={openAdd}>+ Add ticker</button>
             <button type="button" className={`filter-btn ${buyOnly ? "active" : ""}`} aria-pressed={buyOnly} onClick={() => setBuyOnly((v) => !v)}>
               {buyOnly ? "Showing buy zone only" : "Show buy zone only"}
+            </button>
+            <button type="button" className={`filter-btn ${holdingOnly ? "active" : ""}`} aria-pressed={holdingOnly} onClick={() => setHoldingOnly((v) => !v)}>
+              {holdingOnly ? "Showing holdings only" : "Show holdings only"}
             </button>
             <button type="button" className={`filter-btn ${showArchived ? "active" : ""}`} aria-pressed={showArchived} onClick={() => setShowArchived((v) => !v)}>
               {showArchived ? "Back to active" : `Archived (${archivedCount})`}
